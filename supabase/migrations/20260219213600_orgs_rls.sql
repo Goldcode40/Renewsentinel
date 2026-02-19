@@ -1,4 +1,4 @@
-﻿-- RenewSentinel: RLS + policies for organizations and org_members
+-- RenewSentinel: RLS + policies for organizations and org_members
 -- Assumes Supabase Auth: auth.uid() returns the current user id (uuid)
 
 alter table public.organizations enable row level security;

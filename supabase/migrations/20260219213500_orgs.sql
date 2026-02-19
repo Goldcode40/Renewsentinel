@@ -1,4 +1,4 @@
-﻿-- RenewSentinel: initial core org model (Phase 2.1)
+-- RenewSentinel: initial core org model (Phase 2.1)
 -- Tables: organizations, org_members
 -- Note: RLS policies will be added in the next step (separate commit).
 
