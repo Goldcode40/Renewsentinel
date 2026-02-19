@@ -2,51 +2,127 @@
 
 import { useEffect, useMemo, useState } from "react"
 
-type OrgRow = {
+type Org = {
   id: string
   name: string
   created_at: string
-  role: "owner" | "manager" | "viewer"
+  role: string
+}
+
+type Item = {
+  id: string
+  org_id: string
+  type: string
+  title: string
+  issuer: string | null
+  identifier: string | null
+  expires_on: string
+  renewal_window_days: number | null
+  created_at: string
+  updated_at: string
+  status: "green" | "yellow" | "red"
+  days_left: number
+}
+
+const DEV_USER_ID = "00000000-0000-0000-0000-000000000001"
+
+function clsStatus(s: Item["status"]) {
+  if (s === "red") return "bg-red-100 text-red-800 border-red-200"
+  if (s === "yellow") return "bg-yellow-100 text-yellow-800 border-yellow-200"
+  return "bg-green-100 text-green-800 border-green-200"
 }
 
 export default function DashboardPage() {
-  // TEMP: dev user id until Supabase Auth is wired
-  const userId = useMemo(() => "00000000-0000-0000-0000-000000000001", [])
+  const [orgs, setOrgs] = useState<Org[]>([])
+  const [orgId, setOrgId] = useState<string>("")
+  const [days, setDays] = useState<number>(90)
 
-  const [orgs, setOrgs] = useState<OrgRow[]>([])
-  const [loading, setLoading] = useState(true)
+  const [items, setItems] = useState<Item[]>([])
+  const [loadingItems, setLoadingItems] = useState(false)
+  const [err, setErr] = useState<string>("")
+
+  // Create form
+  const [type, setType] = useState<string>("license")
+  const [title, setTitle] = useState<string>("")
+  const [issuer, setIssuer] = useState<string>("")
+  const [identifier, setIdentifier] = useState<string>("")
+  const [expiresOn, setExpiresOn] = useState<string>("")
+  const [renewalWindowDays, setRenewalWindowDays] = useState<number>(30)
   const [creating, setCreating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+
+  const selectedOrg = useMemo(() => orgs.find(o => o.id === orgId), [orgs, orgId])
 
   async function loadOrgs() {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/orgs?user_id=${encodeURIComponent(userId)}`)
-      const json = await res.json()
-      if (!res.ok || !json?.ok) throw new Error(json?.error || "Failed to load orgs")
-      setOrgs(json.orgs || [])
-    } catch (e: any) {
-      setError(e?.message ?? "Unknown error")
-    } finally {
-      setLoading(false)
+    setErr("")
+    const res = await fetch(`/api/orgs?user_id=${DEV_USER_ID}`, { cache: "no-store" })
+    const json = await res.json()
+    if (!json?.ok) {
+      setErr(json?.error ?? "Failed to load orgs")
+      return
+    }
+    setOrgs(json.orgs ?? [])
+    if (!orgId && (json.orgs?.length ?? 0) > 0) {
+      setOrgId(json.orgs[0].id)
     }
   }
 
-  async function createOrg() {
-    setCreating(true)
-    setError(null)
+  async function loadItems(nextOrgId?: string, nextDays?: number) {
+    const oid = nextOrgId ?? orgId
+    const d = nextDays ?? days
+    if (!oid) return
+
+    setLoadingItems(true)
+    setErr("")
     try {
-      const res = await fetch("/api/org/bootstrap", {
+      const res = await fetch(`/api/items/next?org_id=${oid}&days=${d}`, { cache: "no-store" })
+      const json = await res.json()
+      if (!json?.ok) {
+        setErr(json?.error ?? "Failed to load items")
+        setItems([])
+        return
+      }
+      setItems(json.items ?? [])
+    } finally {
+      setLoadingItems(false)
+    }
+  }
+
+  async function createItem(e: React.FormEvent) {
+    e.preventDefault()
+    if (!orgId) return
+    if (!title.trim()) return setErr("Title is required")
+    if (!expiresOn.trim()) return setErr("Expires on is required")
+
+    setCreating(true)
+    setErr("")
+    try {
+      const res = await fetch("/api/items/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ org_name: "Acme HVAC", user_id: userId }),
+        body: JSON.stringify({
+          org_id: orgId,
+          type: type.trim(),
+          title: title.trim(),
+          issuer: issuer.trim() || null,
+          identifier: identifier.trim() || null,
+          expires_on: expiresOn,
+          renewal_window_days: renewalWindowDays,
+        }),
       })
       const json = await res.json()
-      if (!res.ok || !json?.ok) throw new Error(json?.error || "Failed to create org")
-      await loadOrgs()
-    } catch (e: any) {
-      setError(e?.message ?? "Unknown error")
+      if (!json?.ok) {
+        setErr(json?.error ?? "Create failed")
+        return
+      }
+
+      // Clear minimal fields
+      setTitle("")
+      setIssuer("")
+      setIdentifier("")
+      setExpiresOn("")
+      setRenewalWindowDays(30)
+
+      await loadItems(orgId, days)
     } finally {
       setCreating(false)
     }
@@ -57,52 +133,195 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    if (orgId) loadItems(orgId, days)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId])
+
   return (
-    <main className="mx-auto max-w-3xl p-6 space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold">RenewSentinel Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Dev mode: using a fixed user_id until auth is wired.
+    <main className="mx-auto max-w-5xl p-6 space-y-6">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-semibold">RenewSentinel Dashboard (Dev)</h1>
+        <p className="text-sm text-gray-600">
+          Dev user: <span className="font-mono">{DEV_USER_ID}</span>
         </p>
-      </header>
+      </div>
+
+      {err ? (
+        <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          {err}
+        </div>
+      ) : null}
 
       <section className="rounded-lg border p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-medium">Organizations</h2>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium">Organization</label>
+            <select
+              className="h-10 rounded border px-3"
+              value={orgId}
+              onChange={(e) => setOrgId(e.target.value)}
+            >
+              {orgs.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name} ({o.role})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium">Window (days)</label>
+            <input
+              className="h-10 w-28 rounded border px-3"
+              type="number"
+              min={1}
+              max={3650}
+              value={days}
+              onChange={(e) => setDays(parseInt(e.target.value || "90", 10))}
+            />
+          </div>
+
           <button
-            onClick={createOrg}
-            disabled={creating}
-            className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="h-10 rounded bg-black px-4 text-white disabled:opacity-50"
+            onClick={() => loadItems(orgId, days)}
+            disabled={!orgId || loadingItems}
           >
-            {creating ? "Creating..." : "Create Org"}
+            {loadingItems ? "Loading..." : "Refresh"}
           </button>
+
+          <div className="text-sm text-gray-600">
+            {selectedOrg ? (
+              <span className="font-mono">{selectedOrg.id}</span>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 md:grid-cols-2">
+        <div className="rounded-lg border p-4 space-y-4">
+          <h2 className="text-lg font-semibold">Create compliance item</h2>
+
+          <form className="space-y-3" onSubmit={createItem}>
+            <div className="grid grid-cols-1 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium">Type</label>
+                <input
+                  className="h-10 rounded border px-3"
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  placeholder="license | insurance | permit | training | ..."
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium">Title *</label>
+                <input
+                  className="h-10 rounded border px-3"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="HVAC Contractor License"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium">Issuer</label>
+                <input
+                  className="h-10 rounded border px-3"
+                  value={issuer}
+                  onChange={(e) => setIssuer(e.target.value)}
+                  placeholder="State Board"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium">Identifier</label>
+                <input
+                  className="h-10 rounded border px-3"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="HVAC-12345"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium">Expires on *</label>
+                <input
+                  className="h-10 rounded border px-3"
+                  type="date"
+                  value={expiresOn}
+                  onChange={(e) => setExpiresOn(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium">Renewal window (days)</label>
+                <input
+                  className="h-10 rounded border px-3"
+                  type="number"
+                  min={1}
+                  max={3650}
+                  value={renewalWindowDays}
+                  onChange={(e) => setRenewalWindowDays(parseInt(e.target.value || "30", 10))}
+                />
+              </div>
+            </div>
+
+            <button
+              className="h-10 w-full rounded bg-black px-4 text-white disabled:opacity-50"
+              type="submit"
+              disabled={!orgId || creating}
+            >
+              {creating ? "Creating..." : "Create item"}
+            </button>
+          </form>
         </div>
 
-        {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {error}
+        <div className="rounded-lg border p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Next {days} days</h2>
+            <span className="text-sm text-gray-600">{items.length} item(s)</span>
           </div>
-        )}
 
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : orgs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No orgs yet. Click “Create Org”.</p>
-        ) : (
-          <ul className="divide-y">
-            {orgs.map((o) => (
-              <li key={o.id} className="py-3 flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{o.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {o.id} • {new Date(o.created_at).toLocaleString()}
+          {loadingItems ? (
+            <div className="text-sm text-gray-600">Loading…</div>
+          ) : items.length === 0 ? (
+            <div className="text-sm text-gray-600">No items within window.</div>
+          ) : (
+            <ul className="space-y-3">
+              {items.map((it) => (
+                <li key={it.id} className="rounded border p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-medium">{it.title}</div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-mono">{it.type}</span>
+                        {it.issuer ? <> · {it.issuer}</> : null}
+                        {it.identifier ? <> · {it.identifier}</> : null}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-2">
+                      <span className={`rounded border px-2 py-1 text-xs font-medium ${clsStatus(it.status)}`}>
+                        {it.status.toUpperCase()}
+                      </span>
+                      <div className="text-sm">
+                        <span className="font-medium">{it.days_left}</span> days
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <span className="rounded-full border px-2 py-1 text-xs">{o.role}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+
+                  <div className="mt-2 text-sm text-gray-700">
+                    Expires: <span className="font-mono">{it.expires_on}</span>
+                    {typeof it.renewal_window_days === "number" ? (
+                      <> · Window: {it.renewal_window_days}d</>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </section>
     </main>
   )
