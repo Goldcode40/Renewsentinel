@@ -468,6 +468,39 @@ export default function DashboardPage() {
                       >
                         Download latest
                       </button>
+
+                      <button
+                        className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                        onClick={async () => {
+                          if (!orgId) return
+                          const ok = confirm("Delete the latest document for this item?")
+                          if (!ok) return
+
+                          const latestRes = await fetch(`/api/items/docs/latest?org_id=${orgId}&item_id=${it.id}`, { cache: "no-store" })
+                          const latestJson = await latestRes.json()
+                          const docId = latestJson?.document?.id
+                          if (!docId) {
+                            alert("No documents found for this item.")
+                            return
+                          }
+
+                          const delRes = await fetch(`/api/items/docs/delete`, {
+                            method: "DELETE",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ org_id: orgId, doc_id: docId }),
+                          })
+                          const delJson = await delRes.json()
+                          if (!delJson?.ok) {
+                            alert(delJson?.error ?? "Delete failed")
+                            return
+                          }
+
+                          alert("Deleted latest document.")
+                        }}
+                        title="Delete latest document for this item"
+                      >
+                        Delete latest doc
+                      </button>
                     </div>
                   </div>
 
@@ -486,6 +519,7 @@ export default function DashboardPage() {
     </main>
   )
 }
+
 
 
 
