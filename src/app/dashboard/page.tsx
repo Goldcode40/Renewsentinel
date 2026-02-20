@@ -107,6 +107,26 @@ export default function DashboardPage() {
     }
   }
 
+  async function updateItem(id: string, patch: { title?: string; expires_on?: string }) {
+    try {
+      setErr("")
+      if (!orgId) return
+      const res = await fetch(`/api/items/update`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, org_id: orgId, ...patch }),
+      })
+      const json = await res.json()
+      if (!json?.ok) {
+        setErr(json?.error ?? "Failed to update item")
+        return
+      }
+      await loadItems(orgId, days)
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to update item")
+    }
+  }
+
   async function createItem(e: React.FormEvent) {
     e.preventDefault()
     if (!orgId) return
@@ -338,6 +358,18 @@ export default function DashboardPage() {
                       >
                         🗑️ Delete
                       </button>
+
+                      <button
+                        className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                        onClick={() => {
+                          const nextTitle = prompt("New title:", it.title) ?? ""
+                          if (!nextTitle.trim()) return
+                          updateItem(it.id, { title: nextTitle.trim() })
+                        }}
+                        title="Edit title"
+                      >
+                        ✏️ Edit
+                      </button>
                     </div>
                   </div>
 
@@ -356,5 +388,6 @@ export default function DashboardPage() {
     </main>
   )
 }
+
 
 
