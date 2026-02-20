@@ -439,6 +439,17 @@ export default function DashboardPage() {
                           Upload proof
                         </button>
                       </form>
+
+                      <button
+                        className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                        onClick={() => {
+                          if (!orgId) return
+                          window.open(`/api/items/docs?org_id=${orgId}&item_id=${it.id}`, "_blank")
+                        }}
+                        title="Open item documents (JSON)"
+                      >
+                        View docs
+                      </button>
                     </div>
                   </div>
 
@@ -457,6 +468,7 @@ export default function DashboardPage() {
     </main>
   )
 }
+
 
 
 
