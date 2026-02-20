@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "reminders:send": "node ./scripts/send_reminders_stub.mjs"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "0.15.0",
