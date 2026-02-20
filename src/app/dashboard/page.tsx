@@ -39,6 +39,8 @@ export default function DashboardPage() {
 
   const [items, setItems] = useState<Item[]>([])
   const [loadingItems, setLoadingItems] = useState(false)
+  const [scheduling, setScheduling] = useState(false)
+  const [lastScheduled, setLastScheduled] = useState<number | null>(null)
   const [err, setErr] = useState<string>("")
 
   // Create form
@@ -168,10 +170,35 @@ export default function DashboardPage() {
     }
   }
 
+  async function scheduleReminders() {
+    try {
+      setErr("")
+      setLastScheduled(null)
+      if (!orgId) return
+      setScheduling(true)
+      const res = await fetch("/api/reminders/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ org_id: orgId, days }),
+      })
+      const json = await res.json()
+      if (!json?.ok) {
+        setErr(json?.error ?? "Failed to schedule reminders")
+        return
+      }
+      setLastScheduled(json.scheduled ?? 0)
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to schedule reminders")
+    } finally {
+      setScheduling(false)
+    }
+  }
+
   useEffect(() => {
     loadOrgs()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
 
   useEffect(() => {
     if (orgId) loadItems(orgId, days)
@@ -227,14 +254,24 @@ export default function DashboardPage() {
             onClick={() => loadItems(orgId, days)}
             disabled={!orgId || loadingItems}
           >
-            {loadingItems ? "Loading..." : "Refresh"}
+            {loadingItems ? "Loading..." : "Refresh"}          </button>
+
+          <button
+            className="h-10 rounded border px-4 disabled:opacity-50"
+            onClick={scheduleReminders}
+            disabled={!orgId || scheduling}
+            title="Generate reminder events (deduped)"
+          >
+            {scheduling ? "Scheduling..." : "Schedule reminders"}
           </button>
 
           <div className="text-sm text-gray-600">
             {selectedOrg ? (
               <span className="font-mono">{selectedOrg.id}</span>
             ) : null}
-          </div>
+          </div>          {typeof lastScheduled === "number" ? (
+            <div className="text-xs text-gray-600">Scheduled: {lastScheduled}</div>
+          ) : null}
         </div>
       </section>
 
@@ -388,6 +425,14 @@ export default function DashboardPage() {
     </main>
   )
 }
+
+
+
+
+
+
+
+
 
 
 
