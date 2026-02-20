@@ -453,6 +453,17 @@ export default function DashboardPage() {
 
                       <button
                         className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                        onClick={() => {
+                          if (!orgId) return
+                          window.open(`/api/items/docs/summary?org_id=${orgId}&item_id=${it.id}`, "_blank")
+                        }}
+                        title="Open docs summary (JSON)"
+                      >
+                        Docs summary
+                      </button>
+
+                      <button
+                        className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
                         onClick={async () => {
                           if (!orgId) return
                           const res = await fetch(`/api/items/docs/latest?org_id=${orgId}&item_id=${it.id}`, { cache: "no-store" })
@@ -519,6 +530,7 @@ export default function DashboardPage() {
     </main>
   )
 }
+
 
 
 
