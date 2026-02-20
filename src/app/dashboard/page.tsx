@@ -418,6 +418,27 @@ export default function DashboardPage() {
                       >
                         ✏️ Edit
                       </button>
+
+                      <form
+                        className="mt-2 flex flex-col gap-2"
+                        action="/api/items/upload"
+                        method="post"
+                        encType="multipart/form-data"
+                        target="_blank"
+                      >
+                        <input type="hidden" name="org_id" value={orgId} />
+                        <input type="hidden" name="item_id" value={it.id} />
+                        <input
+                          className="text-xs"
+                          type="file"
+                          name="file"
+                          accept=".pdf,.png,.jpg,.jpeg,.txt"
+                          required
+                        />
+                        <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" type="submit">
+                          Upload proof
+                        </button>
+                      </form>
                     </div>
                   </div>
 
@@ -436,6 +457,8 @@ export default function DashboardPage() {
     </main>
   )
 }
+
+
 
 
 
