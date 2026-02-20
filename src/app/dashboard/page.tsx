@@ -87,6 +87,26 @@ export default function DashboardPage() {
     }
   }
 
+  async function deleteItem(id: string) {
+    try {
+      setErr("")
+      if (!orgId) return
+      const res = await fetch(`/api/items/delete`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, org_id: orgId }),
+      })
+      const json = await res.json()
+      if (!json?.ok) {
+        setErr(json?.error ?? "Failed to delete item")
+        return
+      }
+      await loadItems(orgId, days)
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to delete item")
+    }
+  }
+
   async function createItem(e: React.FormEvent) {
     e.preventDefault()
     if (!orgId) return
@@ -308,6 +328,16 @@ export default function DashboardPage() {
                       <div className="text-sm">
                         <span className="font-medium">{it.days_left}</span> days
                       </div>
+
+                      <button
+                        className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                        onClick={() => {
+                          if (confirm("Delete this item?")) deleteItem(it.id)
+                        }}
+                        title="Delete"
+                      >
+                        🗑️ Delete
+                      </button>
                     </div>
                   </div>
 
@@ -326,3 +356,5 @@ export default function DashboardPage() {
     </main>
   )
 }
+
+
