@@ -262,7 +262,18 @@ export default function DashboardPage() {
             disabled={!orgId || scheduling}
             title="Generate reminder events (deduped)"
           >
-            {scheduling ? "Scheduling..." : "Schedule reminders"}
+            {scheduling ? "Scheduling..." : "Schedule reminders"}          </button>
+
+          <button
+            className="h-10 rounded border px-4 disabled:opacity-50"
+            onClick={() => {
+              if (!orgId) return
+              window.open(`/api/reminders?org_id=${orgId}&limit=50`, "_blank")
+            }}
+            disabled={!orgId}
+            title="Open scheduled reminders (JSON)"
+          >
+            View reminders
           </button>
 
           <div className="text-sm text-gray-600">
@@ -425,6 +436,7 @@ export default function DashboardPage() {
     </main>
   )
 }
+
 
 
 
