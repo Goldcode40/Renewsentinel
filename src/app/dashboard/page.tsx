@@ -450,6 +450,24 @@ export default function DashboardPage() {
                       >
                         View docs
                       </button>
+
+                      <button
+                        className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                        onClick={async () => {
+                          if (!orgId) return
+                          const res = await fetch(`/api/items/docs/latest?org_id=${orgId}&item_id=${it.id}`, { cache: "no-store" })
+                          const json = await res.json()
+                          const docId = json?.document?.id
+                          if (!docId) {
+                            alert("No documents found for this item.")
+                            return
+                          }
+                          window.open(`/api/items/doc-url?org_id=${orgId}&doc_id=${docId}&expires=600`, "_blank")
+                        }}
+                        title="Get signed download link for latest document"
+                      >
+                        Download latest
+                      </button>
                     </div>
                   </div>
 
@@ -468,6 +486,7 @@ export default function DashboardPage() {
     </main>
   )
 }
+
 
 
 
