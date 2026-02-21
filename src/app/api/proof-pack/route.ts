@@ -41,6 +41,7 @@ export async function GET(req: Request) {
 
     // latest doc per item (best-effort)
     const latestDocsByItem: Record<string, any> = {}
+    const latestDocUrlByItem: Record<string, string | null> = {}
 
     if (itemIds.length > 0) {
       const docsRes = await supabaseAdmin
@@ -59,6 +60,28 @@ export async function GET(req: Request) {
       }
     }
 
+
+    // Create signed URLs for latest docs (default 600s)
+    const expiresIn = 600
+    for (const itemId of Object.keys(latestDocsByItem)) {
+      const doc = latestDocsByItem[itemId]
+      if (!doc?.storage_bucket || !doc?.storage_path) {
+        latestDocUrlByItem[itemId] = null
+        continue
+      }
+
+      const { data, error } = await supabaseAdmin.storage
+        .from(doc.storage_bucket)
+        .createSignedUrl(doc.storage_path, expiresIn)
+
+      if (error) {
+        latestDocUrlByItem[itemId] = null
+        continue
+      }
+
+      latestDocUrlByItem[itemId] = data?.signedUrl ?? null
+    }
+
     const pack = {
       generated_at: new Date().toISOString(),
       org: orgRes.data,
@@ -69,6 +92,7 @@ export async function GET(req: Request) {
       items: items.map((i) => ({
         ...i,
         latest_doc: latestDocsByItem[i.id] ?? null,
+        latest_doc_signed_url: latestDocUrlByItem[i.id] ?? null,
       })),
     }
 
