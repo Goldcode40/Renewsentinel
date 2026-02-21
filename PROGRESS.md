@@ -24,3 +24,15 @@
 - GET /api/items/doc-url (signed URL) ✅
 - DELETE /api/items/docs/delete (storage + db) ✅
 - Dashboard: Upload proof, View docs, Docs summary, Download latest, Delete latest doc ✅
+
+## 2026-02-21
+
+### Phase 3.1 — Requirements Database (Starting Narrow)
+- requirements_catalog table + index + seed row (NH / hvac / license) ✅
+- GET /api/requirements?state=NH&trade=hvac (read-only) ✅
+- Dashboard: Requirements (Beta) panel loads and displays results ✅
+
+### Phase 3.2 — Guided Setup Wizard (Done-for-you-ish)
+- Dashboard: “Use” button on a requirement prefills Create compliance item form ✅
+  - Prefills: type, title, issuer, renewal window ✅
+  - Expires date left for user to set ✅
