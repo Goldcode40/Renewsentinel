@@ -145,6 +145,48 @@ export async function GET(req: Request) {
       }
     }
 
+    // --- Audit Summary (v0) ---
+    // Lightweight audit trail snapshot using existing timestamps.
+    {
+      let p = pdfDoc.addPage([612, 792])
+      const x0 = margin
+      let yy = 792 - margin
+
+      const t = (text: string, size = 11, bold = false) => {
+        p.drawText(text, { x: x0, y: yy, size, font: bold ? fontBold : font })
+        yy -= size + 6
+      }
+
+      t("Audit Summary (v0)", 16, true)
+      t(`Org: ${orgRes.data.name} (${orgRes.data.id})`, 10)
+      t(`Generated: ${new Date().toISOString()}`, 10)
+      yy -= 10
+
+      t("Items (timestamps)", 12, true)
+      yy -= 4
+
+      for (const it of items) {
+        const doc = latestDocsByItem[it.id]
+
+        t(`${it.type ?? ""} | ${it.title ?? ""}`, 11, true)
+        t(`Item ID: ${it.id}`, 8)
+        t(`Created: ${it.created_at ?? "n/a"}   Updated: ${it.updated_at ?? "n/a"}`, 8)
+        t(`Expires: ${it.expires_on ?? "n/a"}   Status: ${it.status ?? "n/a"}   Window: ${it.renewal_window_days ?? "n/a"}d`, 8)
+
+        if (doc) {
+          t(`Latest doc: ${doc.filename}   Doc created: ${doc.created_at ?? "n/a"}`, 8)
+          t(`Storage: ${doc.storage_bucket}/${doc.storage_path}`, 8)
+        } else {
+          t("Latest doc: none", 8)
+        }
+
+        yy -= 8
+        if (yy < 120) {
+          p = pdfDoc.addPage([612, 792])
+          yy = 792 - margin
+        }
+      }
+    }
     // --- Attachments Index (v0) ---
     // One place to review proofs without hunting.
     {
@@ -208,6 +250,7 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
 
 
 
