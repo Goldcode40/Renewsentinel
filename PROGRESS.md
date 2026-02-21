@@ -36,3 +36,9 @@
 - Dashboard: “Use” button on a requirement prefills Create compliance item form ✅
   - Prefills: type, title, issuer, renewal window ✅
   - Expires date left for user to set ✅
+
+### Phase 4.1 — Proof Pack Export (1-click) [IN PROGRESS]
+- proof_pack_exports table (stub) ✅
+- GET /api/proof-pack?org_id=... returns Proof Pack JSON ✅
+- Proof Pack includes latest_doc_signed_url for quick downloads ✅
+- Dashboard: Proof Pack (JSON) button opens export ✅
