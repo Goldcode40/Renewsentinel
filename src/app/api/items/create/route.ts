@@ -47,8 +47,23 @@ export async function POST(req: Request) {
       return Response.json({ ok: false, error: error.message }, { status: 500 })
     }
 
+    // Audit log (v0)
+    await supabaseAdmin.from("audit_log_events").insert({
+      org_id: orgId,
+      actor_user_id: "00000000-0000-0000-0000-000000000001",
+      actor_role: "owner",
+      action: "item.created",
+      entity_type: "compliance_item",
+      entity_id: data.id,
+      details: {
+        type: data.type,
+        title: data.title,
+        expires_on: data.expires_on,
+      },
+    })
     return Response.json({ ok: true, item: data })
   } catch (e: any) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
