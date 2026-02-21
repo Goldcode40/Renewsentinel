@@ -143,6 +143,56 @@ export async function GET(req: Request) {
       }
     }
 
+    // --- Attachments Index (v0) ---
+    // One place to review proofs without hunting.
+    {
+      let p = pdfDoc.addPage([612, 792])
+      const x0 = margin
+      let yy = 792 - margin
+
+      const t = (text: string, size = 11, bold = false) => {
+        p.drawText(text, { x: x0, y: yy, size, font: bold ? fontBold : font })
+        yy -= size + 6
+      }
+
+      t("Attachments Index (v0)", 16, true)
+      t(`Org: ${orgRes.data.name} (${orgRes.data.id})`, 10)
+      t(`Generated: ${new Date().toISOString()}`, 10)
+      yy -= 10
+
+      const withDocs = items.filter((it) => Boolean(latestDocsByItem[it.id]))
+      t(`Items with latest doc: ${withDocs.length}`, 11, true)
+      yy -= 6
+
+      for (const it of withDocs) {
+        const doc = latestDocsByItem[it.id]
+        const docUrl = latestDocUrlByItem[it.id]
+
+        t(`${it.type ?? ""} | ${it.title ?? ""}`, 12, true)
+        t(`Doc: ${doc.filename}   Type: ${doc.content_type ?? "unknown"}   Size: ${doc.size_bytes ?? "?"} bytes`, 9)
+        t(`Path: ${doc.storage_bucket}/${doc.storage_path}`, 8)
+
+        if (docUrl) {
+          // place QR on the right for this attachment row
+          await (async () => {
+            const dataUrl = await QRCode.toDataURL(docUrl, { margin: 0, width: 200 })
+            const base64 = dataUrl.split(",")[1]
+            const bytes = Buffer.from(base64, "base64")
+            const img = await pdfDoc.embedPng(bytes)
+            p.drawImage(img, { x: 500, y: yy - 60, width: 60, height: 60 })
+          })()
+          t("QR: scan to download (10m)", 8)
+        } else {
+          t("QR: none", 8)
+        }
+
+        yy -= 10
+        if (yy < 120) {
+          p = pdfDoc.addPage([612, 792])
+          yy = 792 - margin
+        }
+      }
+    }
     const pdfBytes = await pdfDoc.save()
 
     return new Response(pdfBytes, {
@@ -156,6 +206,7 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
 
 
 
