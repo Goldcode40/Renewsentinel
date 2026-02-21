@@ -41,6 +41,21 @@ export default function DashboardPage() {
     requirement_type: string;
     title: string;
   };
+  function applyRequirementToForm(r: RequirementRow) {
+    setType(r.requirement_type || "");
+    setTitle(r.title || "");
+    setIssuer(r.issuer || "");
+    setIdentifier("");
+    setRenewalWindowDays(
+      typeof r.default_renewal_window_days === "number" ? r.default_renewal_window_days : 30
+    );
+
+    // user must set expires date manually
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
 
   const [reqState, setReqState] = useState<string>("NH");
   const [reqTrade, setReqTrade] = useState<string>("hvac");
@@ -618,7 +633,17 @@ const [orgs, setOrgs] = useState<Org[]>([])
             <ul className="space-y-2">
               {requirements.map((r) => (
                 <li key={r.id} className="rounded border p-2">
-                  <div className="font-medium">{r.title}</div>
+                  <div className="flex items-center justify-between gap-3">
+  <div className="font-medium">{r.title}</div>
+  <button
+    className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+    type="button"
+    onClick={() => applyRequirementToForm(r)}
+    title="Use this requirement to prefill the create item form"
+  >
+    Use
+  </button>
+</div>
                   <div className="text-xs text-gray-600">
                     {r.state} • {r.trade} • {r.requirement_type}
                   </div>
@@ -631,6 +656,7 @@ const [orgs, setOrgs] = useState<Org[]>([])
 </main>
   )
 }
+
 
 
 
