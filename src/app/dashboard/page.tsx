@@ -33,7 +33,48 @@ function clsStatus(s: Item["status"]) {
 }
 
 export default function DashboardPage() {
-  const [orgs, setOrgs] = useState<Org[]>([])
+  
+  type RequirementRow = {
+    id: string;
+    state: string;
+    trade: string;
+    requirement_type: string;
+    title: string;
+  };
+
+  const [reqState, setReqState] = useState<string>("NH");
+  const [reqTrade, setReqTrade] = useState<string>("hvac");
+  const [requirements, setRequirements] = useState<RequirementRow[]>([]);
+  const [reqLoading, setReqLoading] = useState<boolean>(false);
+  const [reqError, setReqError] = useState<string>("");
+
+  async function loadRequirements() {
+    setReqLoading(true);
+    setReqError("");
+    try {
+      const qs = new URLSearchParams({
+        state: reqState,
+        trade: reqTrade,
+      });
+
+      const res = await fetch(`/api/requirements?${qs.toString()}`);
+      const json = await res.json();
+
+      if (!res.ok) {
+        setReqError(json?.error || "Failed to load requirements");
+        setRequirements([]);
+        return;
+      }
+
+      setRequirements(Array.isArray(json?.rows) ? json.rows : []);
+    } catch (e: any) {
+      setReqError(e?.message || "Failed to load requirements");
+      setRequirements([]);
+    } finally {
+      setReqLoading(false);
+    }
+  }
+const [orgs, setOrgs] = useState<Org[]>([])
   const [orgId, setOrgId] = useState<string>("")
   const [days, setDays] = useState<number>(90)
 
@@ -527,9 +568,71 @@ export default function DashboardPage() {
           )}
         </div>
       </section>
-    </main>
+          {/* Requirements (Beta) */}
+      <section className="mt-10 rounded-lg border p-4">
+        <h2 className="text-lg font-semibold">Requirements (Beta)</h2>
+        <p className="text-sm text-gray-600">
+          Quick check for Phase 3.1: fetch requirements_catalog rows via the new API.
+        </p>
+
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <div className="flex flex-col">
+            <label className="text-xs text-gray-600">State</label>
+            <input
+              className="w-24 rounded border px-2 py-1"
+              value={reqState}
+              onChange={(e) => setReqState(e.target.value.toUpperCase())}
+              placeholder="NH"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-xs text-gray-600">Trade</label>
+            <input
+              className="w-28 rounded border px-2 py-1"
+              value={reqTrade}
+              onChange={(e) => setReqTrade(e.target.value.toLowerCase())}
+              placeholder="hvac"
+            />
+          </div>
+
+          <button
+            className="rounded bg-black px-3 py-2 text-sm text-white"
+            onClick={loadRequirements}
+            disabled={reqLoading}
+          >
+            {reqLoading ? "Loading..." : "Load requirements"}
+          </button>
+        </div>
+
+        {reqError ? (
+          <div className="mt-3 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+            {reqError}
+          </div>
+        ) : null}
+
+        <div className="mt-3">
+          {requirements.length === 0 ? (
+            <div className="text-sm text-gray-500">No results yet.</div>
+          ) : (
+            <ul className="space-y-2">
+              {requirements.map((r) => (
+                <li key={r.id} className="rounded border p-2">
+                  <div className="font-medium">{r.title}</div>
+                  <div className="text-xs text-gray-600">
+                    {r.state} • {r.trade} • {r.requirement_type}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+</main>
   )
 }
+
+
 
 
 
