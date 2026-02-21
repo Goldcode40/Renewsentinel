@@ -8,6 +8,8 @@ export async function GET(req: Request) {
     const url = new URL(req.url)
 
     const orgId = (url.searchParams.get("org_id") ?? "").trim()
+    const downloadParam = (url.searchParams.get("download") ?? "").trim()
+    const asAttachment = downloadParam === "1" || downloadParam.toLowerCase() === "true"
     if (!orgId) return Response.json({ ok: false, error: "Missing org_id" }, { status: 400 })
 
     // org
@@ -199,13 +201,14 @@ export async function GET(req: Request) {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="proof-pack-${orgId}.pdf"`,
+        "Content-Disposition": `${asAttachment ? "attachment" : "inline"}; filename="proof-pack-${orgId}.pdf"`,
       },
     })
   } catch (e: any) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
 
 
 
