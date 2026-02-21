@@ -72,7 +72,7 @@ export async function GET(req: Request) {
 
     // --- Build PDF ---
     const pdfDoc = await PDFDocument.create()
-    const page = pdfDoc.addPage([612, 792]) // US Letter
+    let page = pdfDoc.addPage([612, 792]) // US Letter
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
 
@@ -117,7 +117,7 @@ export async function GET(req: Request) {
       if (y < 120) {
         // start a new page if we're running low
         y = 792 - margin
-        pdfDoc.addPage([612, 792])
+        page = pdfDoc.addPage([612, 792])
       }
     }
 
@@ -134,3 +134,4 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
