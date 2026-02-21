@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
 import { PDFDocument, StandardFonts } from "pdf-lib"
+import QRCode from "qrcode"
 
 export async function GET(req: Request) {
   try {
@@ -75,6 +76,14 @@ export async function GET(req: Request) {
     let page = pdfDoc.addPage([612, 792]) // US Letter
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+    async function drawQr(url: string, x: number, yTop: number, size: number) {
+      // generate a small PNG data url and embed as image
+      const dataUrl = await QRCode.toDataURL(url, { margin: 0, width: 200 })
+      const base64 = dataUrl.split(",")[1]
+      const bytes = Buffer.from(base64, "base64")
+      const img = await pdfDoc.embedPng(bytes)
+      page.drawImage(img, { x, y: yTop - size, width: size, height: size })
+    }
 
     const margin = 40
     let y = 792 - margin
@@ -108,7 +117,13 @@ export async function GET(req: Request) {
       const docUrl = latestDocUrlByItem[it.id]
       if (doc) {
         draw(`Latest doc: ${doc.filename} (${doc.content_type ?? "unknown"})`, 10)
-        draw(`Signed URL (10m): ${docUrl ?? "null"}`, 8)
+        if (docUrl) {
+          // QR code for quick access
+          await drawQr(docUrl, 520, y + 24, 70)
+          draw(`QR: scan to download (10m)`, 8)
+        } else {
+          draw(`QR: none`, 8)
+        }
       } else {
         draw("Latest doc: none", 10)
       }
@@ -134,4 +149,5 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
 
