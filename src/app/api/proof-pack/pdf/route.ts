@@ -92,6 +92,12 @@ export async function GET(req: Request) {
       page.drawText(text, { x: margin, y, size, font: bold ? fontBold : font })
       y -= size + 6
     }
+    function ensureSpace(minY: number) {
+      if (y < minY) {
+        y = 792 - margin
+        page = pdfDoc.addPage([612, 792])
+      }
+    }
 
     draw("RenewSentinel Proof Pack (v0)", 16, true)
     draw(`Org: ${orgRes.data.name} (${orgRes.data.id})`, 10)
@@ -103,6 +109,7 @@ export async function GET(req: Request) {
 
     // Items list (simple; wraps by truncation)
     for (const it of items) {
+      ensureSpace(180)
       const expires = it.expires_on ?? ""
       const issuer = it.issuer ?? ""
       const ident = it.identifier ?? ""
@@ -119,7 +126,7 @@ export async function GET(req: Request) {
         draw(`Latest doc: ${doc.filename} (${doc.content_type ?? "unknown"})`, 10)
         if (docUrl) {
           // QR code for quick access
-          await drawQr(docUrl, 520, y + 24, 70)
+          await drawQr(docUrl, 520, y + 40, 70)
           draw(`QR: scan to download (10m)`, 8)
         } else {
           draw(`QR: none`, 8)
@@ -149,5 +156,6 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
 
 
