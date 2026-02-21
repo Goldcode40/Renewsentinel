@@ -335,6 +335,17 @@ const [orgs, setOrgs] = useState<Org[]>([])
             className="h-10 rounded border px-4 text-sm"
             onClick={() => {
               if (!orgId) return
+              window.open(`/api/proof-pack/pdf?org_id=${orgId}`, "_blank")
+            }}
+            disabled={!orgId}
+            title="Open Proof Pack export (PDF)"
+          >
+            Proof Pack (PDF)
+          </button>
+          <button
+            className="h-10 rounded border px-4 text-sm"
+            onClick={() => {
+              if (!orgId) return
               window.open(`/api/proof-pack?org_id=${orgId}`, "_blank")
             }}
             disabled={!orgId}
@@ -667,6 +678,7 @@ const [orgs, setOrgs] = useState<Org[]>([])
 </main>
   )
 }
+
 
 
 
