@@ -331,6 +331,17 @@ const [orgs, setOrgs] = useState<Org[]>([])
           >
             View reminders
           </button>
+          <button
+            className="h-10 rounded border px-4 text-sm"
+            onClick={() => {
+              if (!orgId) return
+              window.open(`/api/proof-pack?org_id=${orgId}`, "_blank")
+            }}
+            disabled={!orgId}
+            title="Open Proof Pack export (JSON)"
+          >
+            Proof Pack (JSON)
+          </button>
 
           <div className="text-sm text-gray-600">
             {selectedOrg ? (
@@ -656,6 +667,7 @@ const [orgs, setOrgs] = useState<Org[]>([])
 </main>
   )
 }
+
 
 
 
