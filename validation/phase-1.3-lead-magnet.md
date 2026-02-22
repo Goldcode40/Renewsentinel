@@ -10,7 +10,6 @@
 
 ## Audience
 - NH HVAC shop owner / office manager
-- Bonus fit: any small HVAC shop that does gas/oil/refrigerant work and needs to produce proof (COIs, certs, permits)
 
 ## Promise (what they get in 60 seconds)
 - A one-page checklist + simple tracker that shows:
@@ -27,7 +26,7 @@
 5. Mini tracker template (copy/paste into Google Sheets)
 
 ## The checklist (10–15 items max)
-- [ ] List every licensed/credentialed tech (name + role + scope: gas / oil / refrigerant)
+- [ ] List every licensed/credentialed tech (name + role + scope: gas / oil / refrigerants)
 - [ ] Record each tech’s license/cert number + expiry date (don’t guess)
 - [ ] Confirm who is legally allowed to do gas-related work on jobs you take (scope check)
 - [ ] Confirm who is legally allowed to do oil-heat/burner work on jobs you take (scope check)
