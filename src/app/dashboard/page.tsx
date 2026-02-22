@@ -51,18 +51,28 @@ setIdentifier("");
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }
-
-
-  async function applyRequirement(templateId: string) {
+  }  async function applyRequirement(templateId: string, templateTitle?: string) {
     if (!orgId) {
       setReqError("Select an organization first.");
       return;
     }
+    setReqError("");
+    setApplyTemplateId(templateId);
+    setApplyTemplateTitle(templateTitle ?? "");
+    setApplyExpiresOn("");
+    setApplyOpen(true);
+  }
 
-    const expires = prompt("Expiry date (YYYY-MM-DD):", "");
-    if (!expires || !expires.trim()) return;
+  async function confirmApplyRequirement() {
+    if (!orgId) return;
+    if (!applyTemplateId) return;
 
+    if (!applyExpiresOn.trim()) {
+      setReqError("Expiry date is required.");
+      return;
+    }
+
+    setApplySaving(true);
     setReqError("");
     try {
       const res = await fetch("/api/requirements/apply", {
@@ -70,8 +80,8 @@ setIdentifier("");
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           org_id: orgId,
-          template_id: templateId,
-          expires_on: expires.trim(),
+          template_id: applyTemplateId,
+          expires_on: applyExpiresOn.trim(),
         }),
       });
       const json = await res.json();
@@ -79,18 +89,29 @@ setIdentifier("");
         setReqError(json?.error || "Failed to apply requirement");
         return;
       }
+
+      setApplyOpen(false);
       await loadItems(orgId, days);
     } catch (e: any) {
       setReqError(e?.message || "Failed to apply requirement");
+    } finally {
+      setApplySaving(false);
     }
   }
-
 
   const [reqState, setReqState] = useState<string>("NH");
   const [reqTrade, setReqTrade] = useState<string>("hvac");
   const [requirements, setRequirements] = useState<RequirementRow[]>([]);
   const [reqLoading, setReqLoading] = useState<boolean>(false);
   const [reqError, setReqError] = useState<string>("");
+
+  
+
+  const [applyOpen, setApplyOpen] = useState<boolean>(false);
+  const [applyTemplateId, setApplyTemplateId] = useState<string>("");
+  const [applyTemplateTitle, setApplyTemplateTitle] = useState<string>("");
+  const [applyExpiresOn, setApplyExpiresOn] = useState<string>("");
+  const [applySaving, setApplySaving] = useState<boolean>(false);
 
   async function loadRequirements() {
     setReqLoading(true);
@@ -698,7 +719,7 @@ const [orgs, setOrgs] = useState<Org[]>([])
     className="rounded bg-black px-2 py-1 text-xs text-white disabled:opacity-50"
     type="button"
     disabled={!orgId}
-    onClick={() => applyRequirement(r.id)}
+    onClick={() => applyRequirement(r.id, r.title)}
     title="Add this requirement to tracking (creates a compliance item)"
   >
     Add
@@ -713,9 +734,65 @@ const [orgs, setOrgs] = useState<Org[]>([])
           )}
         </div>
       </section>
+      {/* Apply Requirement Modal */}
+      {applyOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-4 shadow-lg">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm text-gray-600">Add to tracking</div>
+                <div className="text-lg font-semibold">{applyTemplateTitle || "Requirement"}</div>
+              </div>
+              <button
+                className="rounded border px-2 py-1 text-sm hover:bg-gray-50"
+                type="button"
+                onClick={() => setApplyOpen(false)}
+                disabled={applySaving}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <label className="text-sm font-medium">Expiry date</label>
+              <input
+                className="h-10 w-full rounded border px-3"
+                type="date"
+                value={applyExpiresOn}
+                onChange={(e) => setApplyExpiresOn(e.target.value)}
+              />
+              <p className="text-xs text-gray-600">
+                You can adjust renewal windows and docs later. This just creates the tracking item.
+              </p>
+            </div>
+
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                className="h-10 rounded border px-4 text-sm hover:bg-gray-50 disabled:opacity-50"
+                type="button"
+                onClick={() => setApplyOpen(false)}
+                disabled={applySaving}
+              >
+                Cancel
+              </button>
+              <button
+                className="h-10 rounded bg-black px-4 text-sm text-white disabled:opacity-50"
+                type="button"
+                onClick={confirmApplyRequirement}
+                disabled={applySaving || !applyExpiresOn.trim()}
+              >
+                {applySaving ? "Adding..." : "Add to tracking"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 </main>
   )
 }
+
+
 
 
 
