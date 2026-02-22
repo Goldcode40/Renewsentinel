@@ -90,8 +90,32 @@ setIdentifier("");
         return;
       }
 
-      setApplyOpen(false);
+            setApplyOpen(false);
+
+      // Success banner (helps when the new item is outside the current window)
+      try {
+        const now = new Date();
+        const exp = new Date(applyExpiresOn + "T00:00:00");
+        const daysLeft = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const outside = typeof daysLeft === "number" && daysLeft > days;
+        setApplySuccess(
+          outside
+            ? `Added to tracking. Expires in ${daysLeft} days (outside your current ${days}-day window).`
+            : `Added to tracking. Expires in ${daysLeft} days.`
+        );
+        setApplySuccessOutside(!!outside);
+      } catch {
+        setApplySuccess("Added to tracking.");
+        setApplySuccessOutside(false);
+      }
+
       await loadItems(orgId, days);
+
+      // auto-clear banner after 6s
+      setTimeout(() => {
+        setApplySuccess("");
+        setApplySuccessOutside(false);
+      }, 6000);
     } catch (e: any) {
       setReqError(e?.message || "Failed to apply requirement");
     } finally {
@@ -112,6 +136,8 @@ setIdentifier("");
   const [applyTemplateTitle, setApplyTemplateTitle] = useState<string>("");
   const [applyExpiresOn, setApplyExpiresOn] = useState<string>("");
   const [applySaving, setApplySaving] = useState<boolean>(false);
+  const [applySuccess, setApplySuccess] = useState<string>("");
+  const [applySuccessOutside, setApplySuccessOutside] = useState<boolean>(false);
 
   async function loadRequirements() {
     setReqLoading(true);
@@ -308,6 +334,8 @@ const [orgs, setOrgs] = useState<Org[]>([])
 
   useEffect(() => {
     if (orgId) loadItems(orgId, days)
+    setApplySuccess("")
+    setApplySuccessOutside(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId])
 
@@ -326,7 +354,29 @@ const [orgs, setOrgs] = useState<Org[]>([])
         </div>
       ) : null}
 
-      <section className="rounded-lg border p-4 space-y-3">
+      
+
+      {/* Apply success banner */}
+      {applySuccess ? (
+        <div className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-900">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>{applySuccess}</div>
+            {applySuccessOutside ? (
+              <button
+                className="rounded bg-black px-3 py-2 text-xs text-white"
+                type="button"
+                onClick={() => {
+                  setDays(365)
+                  loadItems(orgId, 365)
+                }}
+                title="Expand the window to see the new item"
+              >
+                Set window to 365 + Refresh
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}<section className="rounded-lg border p-4 space-y-3">
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium">Organization</label>
@@ -791,6 +841,7 @@ const [orgs, setOrgs] = useState<Org[]>([])
 </main>
   )
 }
+
 
 
 
