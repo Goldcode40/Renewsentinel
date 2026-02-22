@@ -48,7 +48,24 @@ export async function POST(req: Request) {
     const renewalWindowDays =
       typeof tpl.default_renewal_window_days === "number" ? tpl.default_renewal_window_days : 30
 
-    // Create compliance item
+        // Create org-specific requirement copy (so org can customize later)
+    const { data: orgReq, error: orgReqErr } = await supabaseAdmin
+      .from("org_requirements")
+      .insert({
+        org_id: orgId,
+        template_id: templateId,
+        name: title,
+        category: itemType, // keep simple mapping for now
+        description: tpl.description ?? null,
+        renewal_window_days: renewalWindowDays,
+        grace_period_days: null,
+        is_active: true,
+      })
+      .select("id")
+      .single()
+
+    const orgRequirementId = orgReq?.id ?? null
+// Create compliance item
     const { data: item, error: itemErr } = await supabaseAdmin
       .from("compliance_items")
       .insert({
@@ -69,12 +86,13 @@ export async function POST(req: Request) {
 
     // Link item to template (best effort)
     try {
-      await supabaseAdmin.from("compliance_item_requirements").insert({
-        org_id: orgId,
-        compliance_item_id: item.id,
-        org_requirement_id: templateId, // NOTE: linking to template for now; we'll introduce org_requirements in the wizard next
-      })
-    } catch (_) {
+            if (orgRequirementId) {
+        await supabaseAdmin.from("compliance_item_requirements").insert({
+          org_id: orgId,
+          compliance_item_id: item.id,
+          org_requirement_id: orgRequirementId,
+        })
+      }} catch (_) {
       // ignore
     }
 
@@ -98,3 +116,4 @@ export async function POST(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
