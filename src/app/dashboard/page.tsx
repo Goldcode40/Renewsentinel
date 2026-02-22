@@ -333,6 +333,12 @@ useEffect(() => {
     if (orgId) loadItems(orgId, days)
     setApplySuccess("")
     setApplySuccessOutside(false)
+
+    // Apply org profile defaults to wizard
+    const org = orgs.find(o => o.id === orgId)
+    if (org?.profile_state) setReqState(String(org.profile_state).toUpperCase())
+    if (org?.profile_trade) setReqTrade(String(org.profile_trade).toLowerCase())
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId])
 
@@ -836,6 +842,7 @@ disabled={reqLoading}
 </main>
 )
 }
+
 
 
 
