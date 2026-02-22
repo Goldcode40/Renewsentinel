@@ -239,7 +239,7 @@ export async function GET(req: Request) {
     }
     const pdfBytes = await pdfDoc.save()
 
-    return new Response(pdfBytes, {
+    return new Response(Buffer.from(pdfBytes), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
@@ -250,6 +250,9 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
+
+
 
 
 

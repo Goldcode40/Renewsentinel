@@ -96,9 +96,31 @@ export async function GET(req: Request) {
       })),
     }
 
+    // Audit log (v0) - best effort (do not block export)
+    try {
+      await supabaseAdmin.from("audit_log_events").insert({
+        org_id: orgId,
+        actor_user_id: "00000000-0000-0000-0000-000000000001",
+        actor_role: "owner",
+        action: "proofpack.exported.json",
+        entity_type: "proof_pack",
+        entity_id: null,
+        details: {
+          total_items: pack.summary.total_items,
+          items_with_latest_doc: pack.summary.items_with_latest_doc,
+        },
+      })
+    } catch (_) {
+      // ignore audit failures
+    }
+
     return Response.json({ ok: true, pack })
   } catch (e: any) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
+
+
+
 
