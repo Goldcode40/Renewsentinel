@@ -1,10 +1,12 @@
 "use client"
 import { useEffect, useMemo, useState } from "react"
 type Org = {
-id: string
-name: string
-created_at: string
-role: string
+  id: string
+  name: string
+  created_at: string
+  role: string
+  profile_state?: string | null
+  profile_trade?: string | null
 }
 type Item = {
 id: string
@@ -834,5 +836,6 @@ disabled={reqLoading}
 </main>
 )
 }
+
 
 
