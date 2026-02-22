@@ -54,6 +54,38 @@ setIdentifier("");
   }
 
 
+  async function applyRequirement(templateId: string) {
+    if (!orgId) {
+      setReqError("Select an organization first.");
+      return;
+    }
+
+    const expires = prompt("Expiry date (YYYY-MM-DD):", "");
+    if (!expires || !expires.trim()) return;
+
+    setReqError("");
+    try {
+      const res = await fetch("/api/requirements/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          org_id: orgId,
+          template_id: templateId,
+          expires_on: expires.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!json?.ok) {
+        setReqError(json?.error || "Failed to apply requirement");
+        return;
+      }
+      await loadItems(orgId, days);
+    } catch (e: any) {
+      setReqError(e?.message || "Failed to apply requirement");
+    }
+  }
+
+
   const [reqState, setReqState] = useState<string>("NH");
   const [reqTrade, setReqTrade] = useState<string>("hvac");
   const [requirements, setRequirements] = useState<RequirementRow[]>([]);
@@ -662,6 +694,15 @@ const [orgs, setOrgs] = useState<Org[]>([])
   >
     Use
   </button>
+  <button
+    className="rounded bg-black px-2 py-1 text-xs text-white disabled:opacity-50"
+    type="button"
+    disabled={!orgId}
+    onClick={() => applyRequirement(r.id)}
+    title="Add this requirement to tracking (creates a compliance item)"
+  >
+    Add
+  </button>
 </div>
                   <div className="text-xs text-gray-600">
                     {r.state} • {r.trade} • {r.requirement_type}
@@ -675,6 +716,9 @@ const [orgs, setOrgs] = useState<Org[]>([])
 </main>
   )
 }
+
+
+
 
 
 
