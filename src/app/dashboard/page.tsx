@@ -111,6 +111,27 @@ setIdentifier("");
 
       await loadItems(orgId, days);
 
+      // If this was triggered from "Add selected", advance to the next checked requirement
+      setSelectedReqIds((prev) => {
+        const next = { ...prev };
+        if (applyTemplateId) next[applyTemplateId] = false;
+        return next;
+      });
+
+      // Find next selected requirement and continue the flow
+      const nextId = Object.keys(selectedReqIds).find((id) => selectedReqIds[id] && id !== applyTemplateId);
+      if (nextId) {
+        const row = requirements.find((r) => r.id === nextId);
+        if (row) {
+          // keep modal open and prompt for next expiry
+          setApplyTemplateId(row.id);
+          setApplyTemplateTitle(row.title);
+          setApplyExpiresOn("");
+          setApplyOpen(true);
+          return;
+        }
+      }
+
       // auto-clear banner after 6s
       setTimeout(() => {
         setApplySuccess("");
@@ -873,6 +894,7 @@ const [orgs, setOrgs] = useState<Org[]>([])
 </main>
   )
 }
+
 
 
 
