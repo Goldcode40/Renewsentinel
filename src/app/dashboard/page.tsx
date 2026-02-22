@@ -333,6 +333,14 @@ useEffect(() => {
     setApplySuccessOutside(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId])
+
+
+  // Auto-load requirements (wizard feel)
+  useEffect(() => {
+    if (!reqState || !reqTrade) return;
+    loadRequirements();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reqState, reqTrade]);
 return (
 <main className="mx-auto max-w-5xl p-6 space-y-6">
 <div className="flex flex-col gap-2">
@@ -826,4 +834,5 @@ disabled={reqLoading}
 </main>
 )
 }
+
 
