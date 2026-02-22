@@ -23,30 +23,11 @@ update public.requirement_templates
 set title = coalesce(title, name)
 where title is null;
 
--- A compatibility view so existing API continues to work
-create or replace view public.requirements_catalog as
-select
-  id,
-  country,
-  state,
-  trade,
-  requirement_type,
-  coalesce(title, name) as title,
-  issuer,
-  source_url,
-  description,
-  default_renewal_window_days,
-  default_reminder_offsets_days,
-  required_docs,
-  is_active,
-  created_at,
-  updated_at
-from public.requirement_templates;
-
--- Helpful indexes for the API query pattern
+-- Compatibility view moved to next migration (fix_requirements_catalog_view)\r\n-- Helpful indexes for the API query pattern
 create index if not exists idx_req_templates_state_trade_active
   on public.requirement_templates (state, trade, is_active);
 
 create index if not exists idx_req_templates_type
   on public.requirement_templates (requirement_type);
+
 
