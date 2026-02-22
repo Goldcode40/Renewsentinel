@@ -126,7 +126,8 @@ setIdentifier("");
   const [reqState, setReqState] = useState<string>("NH");
   const [reqTrade, setReqTrade] = useState<string>("hvac");
   const [requirements, setRequirements] = useState<RequirementRow[]>([]);
-  const [reqLoading, setReqLoading] = useState<boolean>(false);
+  
+  const [selectedReqIds, setSelectedReqIds] = useState<Record<string, boolean>>({});const [reqLoading, setReqLoading] = useState<boolean>(false);
   const [reqError, setReqError] = useState<string>("");
 
   
@@ -157,7 +158,12 @@ setIdentifier("");
         return;
       }
 
-      setRequirements(Array.isArray(json?.rows) ? json.rows : []);
+            const rows = Array.isArray(json?.rows) ? json.rows : [];
+      setRequirements(rows);
+      // reset selection on load
+      const nextSel: Record<string, boolean> = {};
+      for (const r of rows) nextSel[r.id] = false;
+      setSelectedReqIds(nextSel);
     } catch (e: any) {
       setReqError(e?.message || "Failed to load requirements");
       setRequirements([]);
@@ -707,9 +713,9 @@ const [orgs, setOrgs] = useState<Org[]>([])
       </section>
           {/* Requirements (Beta) */}
       <section className="mt-10 rounded-lg border p-4">
-        <h2 className="text-lg font-semibold">Requirements (Beta)</h2>
+        <h2 className="text-lg font-semibold">Setup Wizard (Requirements Library)</h2>
         <p className="text-sm text-gray-600">
-          Quick check for Phase 3.1: fetch requirements_catalog rows via the new API.
+          Pick your state + trade, then add requirements into your tracking list.
         </p>
 
         <div className="mt-3 flex flex-wrap items-end gap-3">
@@ -740,6 +746,20 @@ const [orgs, setOrgs] = useState<Org[]>([])
           >
             {reqLoading ? "Loading..." : "Load requirements"}
           </button>
+
+          <div className="text-sm text-gray-600">
+            Selected: {Object.values(selectedReqIds).filter(Boolean).length}
+          </div>
+
+          <button
+            className="rounded border px-3 py-2 text-sm disabled:opacity-50"
+            type="button"
+            disabled={Object.values(selectedReqIds).filter(Boolean).length === 0}
+            onClick={() => alert("Next step: batch apply selected requirements (coming next).")}
+            title="Batch apply (next step)"
+          >
+            Add selected (next)
+          </button>
         </div>
 
         {reqError ? (
@@ -755,8 +775,16 @@ const [orgs, setOrgs] = useState<Org[]>([])
             <ul className="space-y-2">
               {requirements.map((r) => (
                 <li key={r.id} className="rounded border p-2">
-                  <div className="flex items-center justify-between gap-3">
-  <div className="font-medium">{r.title}</div>
+  <div className="flex items-center justify-between gap-3">
+    <label className="flex items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        checked={!!selectedReqIds[r.id]}
+        onChange={(e) => setSelectedReqIds((prev) => ({ ...prev, [r.id]: e.target.checked }))}
+      />
+      <span className="font-medium">{r.title}</span>
+    </label>
+    <div className="flex items-center gap-2">
   <button
     className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
     type="button"
@@ -774,11 +802,7 @@ const [orgs, setOrgs] = useState<Org[]>([])
   >
     Add
   </button>
-</div>
-                  <div className="text-xs text-gray-600">
-                    {r.state} • {r.trade} • {r.requirement_type}
-                  </div>
-                </li>
+</div>`r`n    <div className="text-xs text-gray-600">{r.state} • {r.trade} • {r.requirement_type}</div>`r`n  </div>`r`n</li>
               ))}
             </ul>
           )}
@@ -841,6 +865,8 @@ const [orgs, setOrgs] = useState<Org[]>([])
 </main>
   )
 }
+
+
 
 
 
