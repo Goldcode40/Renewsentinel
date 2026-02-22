@@ -5,6 +5,12 @@ type Body = {
   user_id?: string
 }
 
+
+type ExistingMemberRow = {
+  role: string
+  org: { id: string; name: string; created_at: string } | null
+}
+
 export async function POST(req: Request) {
   try {
     const supabaseAdmin = getSupabaseAdmin()
@@ -16,13 +22,17 @@ export async function POST(req: Request) {
     if (!orgName) return Response.json({ ok: false, error: "Missing org_name" }, { status: 400 })
     if (!userId) return Response.json({ ok: false, error: "Missing user_id" }, { status: 400 })
 
+
     // 1) If user already has an org membership, return that org (idempotent behavior)
-    const { data: existing, error: existingErr } = await supabaseAdmin
+    const existingRes = await supabaseAdmin
       .from("org_members")
       .select("role, org:organizations(id,name,created_at)")
       .eq("user_id", userId)
       .order("created_at", { ascending: true })
       .limit(1)
+
+    const existing = (existingRes.data as ExistingMemberRow[] | null) ?? null
+    const existingErr = existingRes.error
 
     if (existingErr) {
       return Response.json({ ok: false, error: existingErr.message }, { status: 500 })
@@ -65,3 +75,5 @@ export async function POST(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
+

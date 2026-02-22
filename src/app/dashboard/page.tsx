@@ -44,13 +44,10 @@ export default function DashboardPage() {
   function applyRequirementToForm(r: RequirementRow) {
     setType(r.requirement_type || "");
     setTitle(r.title || "");
-    setIssuer(r.issuer || "");
-    setIdentifier("");
-    setRenewalWindowDays(
-      typeof r.default_renewal_window_days === "number" ? r.default_renewal_window_days : 30
-    );
-
-    // user must set expires date manually
+    setIssuer("");
+setIdentifier("");
+    setRenewalWindowDays(typeof (r as any).renewal_window_days === "number" ? (r as any).renewal_window_days : 30);
+// user must set expires date manually
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -678,6 +675,8 @@ const [orgs, setOrgs] = useState<Org[]>([])
 </main>
   )
 }
+
+
 
 
 
