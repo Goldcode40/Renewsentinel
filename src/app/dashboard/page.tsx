@@ -195,6 +195,24 @@ const [expiresOn, setExpiresOn] = useState<string>("")
 const [renewalWindowDays, setRenewalWindowDays] = useState<number>(30)
 const [creating, setCreating] = useState(false)
 const selectedOrg = useMemo(() => orgs.find(o => o.id === orgId), [orgs, orgId])
+
+
+  async function saveOrgProfile(nextState?: string, nextTrade?: string) {
+    if (!orgId) return
+    try {
+      await fetch("/api/orgs/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          org_id: orgId,
+          profile_state: (nextState ?? reqState).toUpperCase(),
+          profile_trade: (nextTrade ?? reqTrade).toLowerCase(),
+        }),
+      })
+    } catch {
+      // ignore (dev UX)
+    }
+  }
 async function loadOrgs() {
 setErr("")
 const res = await fetch(`/api/orgs?user_id=${DEV_USER_ID}`, { cache: "no-store" })
@@ -696,7 +714,7 @@ Pick your state + trade, then add requirements into your tracking list.
 <input
 className="w-24 rounded border px-2 py-1"
 value={reqState}
-onChange={(e) => setReqState(e.target.value.toUpperCase())}
+onChange={(e) => setReqState(e.target.value.toUpperCase())} onBlur={() => saveOrgProfile(reqState, reqTrade)}
 placeholder="NH"
 />
 </div>
@@ -705,7 +723,7 @@ placeholder="NH"
 <input
 className="w-28 rounded border px-2 py-1"
 value={reqTrade}
-onChange={(e) => setReqTrade(e.target.value.toLowerCase())}
+onChange={(e) => setReqTrade(e.target.value.toLowerCase())} onBlur={() => saveOrgProfile(reqState, reqTrade)}
 placeholder="hvac"
 />
 </div>
@@ -842,6 +860,7 @@ disabled={reqLoading}
 </main>
 )
 }
+
 
 
 
