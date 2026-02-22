@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     // Fetch org memberships for user, with org details
     const { data, error } = await supabaseAdmin
       .from("org_members")
-      .select("role, org:organizations(id,name,created_at)")
+      .select("role, org:organizations(id,name,created_at,profile_state,profile_trade)")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
 
@@ -33,3 +33,4 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
