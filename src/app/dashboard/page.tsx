@@ -755,7 +755,15 @@ const [orgs, setOrgs] = useState<Org[]>([])
             className="rounded border px-3 py-2 text-sm disabled:opacity-50"
             type="button"
             disabled={Object.values(selectedReqIds).filter(Boolean).length === 0}
-            onClick={() => alert("Next step: batch apply selected requirements (coming next).")}
+            onClick={() => {
+  const firstId = Object.keys(selectedReqIds).find((id) => selectedReqIds[id]);
+  if (!firstId) return;
+
+  const row = requirements.find((r) => r.id === firstId);
+  if (!row) return;
+
+  applyRequirement(row.id, row.title);
+}}
             title="Batch apply (next step)"
           >
             Add selected (next)
@@ -865,6 +873,7 @@ const [orgs, setOrgs] = useState<Org[]>([])
 </main>
   )
 }
+
 
 
 
