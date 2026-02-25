@@ -96,7 +96,6 @@ export async function GET(req: Request) {
 
     // Signed URLs for subcontractor docs (10 minutes)
     const subDocUrlById: Record<string, string | null> = {}
-    const expiresIn = 600
     for (const d of subDocs) {
       if (!d?.storage_bucket || !d?.storage_path) {
         subDocUrlById[String(d.id)] = null
