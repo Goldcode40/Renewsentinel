@@ -35,6 +35,16 @@ export async function POST(req: Request) {
       return Response.json({ ok: false, error: polErr.message }, { status: 500 })
     }
 
+    // Load subcontractor docs with expirations (join subcontractor name)
+    const { data: subDocs, error: subErr } = await supabaseAdmin
+      .from("subcontractor_documents")
+      .select("id, org_id, subcontractor_id, doc_type, title, expires_on, subcontractor:subcontractors(name)")
+      .eq("org_id", orgId)
+
+    if (subErr) {
+      return Response.json({ ok: false, error: subErr.message }, { status: 500 })
+    }
+
     const reminderOffsets = [30, 14, 7, 1] // days before expiry
 
     function parseDateOnly(s: string): Date {
@@ -94,7 +104,7 @@ export async function POST(req: Request) {
 
         scheduledRows.push({
           org_id: orgId,
-          item_id: p.id, // reuse column as generic entity id
+          item_id: p.id, // reuse as generic entity id
           channel: "email",
           kind: "pre_expiry",
           scheduled_for: when.toISOString(),
@@ -110,7 +120,40 @@ export async function POST(req: Request) {
       }
     }
 
-    // Dedupe: don't insert the same (org_id, item_id, channel, kind, scheduled_for) twice.
+    // 3) Subcontractor documents (expiring)
+    for (const d of subDocs ?? []) {
+      if (!d?.expires_on) continue
+      const exp = parseDateOnly(d.expires_on)
+      const daysLeft = daysBetween(now, exp)
+
+      if (daysLeft < 0) continue
+      if (daysLeft > maxDays) continue
+
+      const subName = (d as any)?.subcontractor?.name ?? ""
+
+      for (const offset of reminderOffsets) {
+        const when = addDays(exp, -offset)
+        if (when.getTime() <= Date.now()) continue
+
+        scheduledRows.push({
+          org_id: orgId,
+          item_id: d.id, // doc id
+          channel: "email",
+          kind: "pre_expiry",
+          scheduled_for: when.toISOString(),
+          meta: {
+            entity: "subcontractor_document",
+            offset_days: offset,
+            subcontractor_id: d.subcontractor_id,
+            subcontractor_name: subName,
+            doc_type: d.doc_type,
+            title: d.title ?? null,
+            expires_on: d.expires_on,
+          },
+        })
+      }
+    }
+
     const itemIds = Array.from(new Set(scheduledRows.map((r) => r.item_id)))
 
     if (itemIds.length === 0) {
