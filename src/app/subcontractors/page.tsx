@@ -349,7 +349,11 @@ export default function SubcontractorsPage() {
     e.preventDefault()
     if (!orgId) return
 
-    const form = new FormData(e.currentTarget)
+    // Capture elements BEFORE any awaits (React can null event targets after async)
+    const formEl = e.currentTarget
+    const fileInput = formEl.querySelector('input[type="file"]') as HTMLInputElement | null
+
+    const form = new FormData(formEl)
     form.set("org_id", orgId)
     form.set("subcontractor_id", subcontractorId)
     if (docId) form.set("doc_id", docId)
@@ -363,8 +367,11 @@ export default function SubcontractorsPage() {
         setDocsErr(json?.error ?? "Upload failed")
         return
       }
+
       await loadDocs(subcontractorId)
-      ;(e.currentTarget.querySelector('input[type="file"]') as HTMLInputElement | null)?.value && ((e.currentTarget.querySelector('input[type="file"]') as HTMLInputElement).value = "")
+
+      // Clear file input safely
+      if (fileInput) fileInput.value = ""
     } catch (err: any) {
       setDocsErr(err?.message ?? "Upload failed")
     } finally {
@@ -435,7 +442,7 @@ export default function SubcontractorsPage() {
         </div>
 
         {loading ? (
-          <div className="text-sm text-gray-600">Loading…</div>
+          <div className="text-sm text-gray-600">Loadingâ€¦</div>
         ) : rows.length === 0 ? (
           <div className="text-sm text-gray-600">No subcontractors yet.</div>
         ) : (
@@ -464,13 +471,13 @@ export default function SubcontractorsPage() {
                     <td className="p-2">
                       <div className="flex items-center gap-2">
                         <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" onClick={() => openDocs(s)} title="Docs">
-                          📎 Docs
+                          ðŸ“Ž Docs
                         </button>
                         <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" onClick={() => openEdit(s)} title="Edit">
-                          ✏️ Edit
+                          âœï¸ Edit
                         </button>
                         <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" onClick={() => deleteSub(s)} title="Delete">
-                          🗑️ Delete
+                          ðŸ—‘ï¸ Delete
                         </button>
                       </div>
                     </td>
@@ -492,7 +499,7 @@ export default function SubcontractorsPage() {
                 <div className="text-lg font-semibold">{selectedOrg?.name ?? "Organization"}</div>
               </div>
               <button className="rounded border px-2 py-1 text-sm hover:bg-gray-50" type="button" onClick={() => setOpen(false)} disabled={saving} title="Close">
-                ✕
+                âœ•
               </button>
             </div>
 
@@ -556,7 +563,7 @@ export default function SubcontractorsPage() {
                 <div className="text-lg font-semibold">{docsFor.name}</div>
               </div>
               <button className="rounded border px-2 py-1 text-sm hover:bg-gray-50" type="button" onClick={() => setDocsOpen(false)} disabled={docsSaving} title="Close">
-                ✕
+                âœ•
               </button>
             </div>
 
@@ -598,7 +605,7 @@ export default function SubcontractorsPage() {
             <div className="mt-4 rounded border">
               <div className="border-b bg-gray-50 px-3 py-2 text-sm font-medium">Docs</div>
               {docsLoading ? (
-                <div className="p-3 text-sm text-gray-600">Loading…</div>
+                <div className="p-3 text-sm text-gray-600">Loadingâ€¦</div>
               ) : docs.length === 0 ? (
                 <div className="p-3 text-sm text-gray-600">No docs yet.</div>
               ) : (
