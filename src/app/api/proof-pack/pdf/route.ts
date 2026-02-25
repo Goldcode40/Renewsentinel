@@ -205,25 +205,35 @@ export async function GET(req: Request) {
         const cov = typeof p.coverage_amount === "number" ? String(p.coverage_amount) : ""
         draw(`${type} | ${provider}`, 12, true)
         draw(`Policy #: ${num || "-"}   Coverage: ${cov || "-"}`, 10)
-                draw(`Effective: ${eff || "-"}   Expiry: ${exp || "-"}`, 10)
+                        draw(`Effective: ${eff || "-"}   Expiry: ${exp || "-"}`, 10)
 
-// Policy document QR (if uploaded)
-const pFile = (p as any).document_filename ?? ""
-const pSigned = (typeof policyDocUrlById !== "undefined") ? policyDocUrlById[String((p as any).id)] : null
-if (pFile) {
-  draw(`File: ${pFile}`, 9)
-}
+        // Insurance policy doc (best effort): File + QR
+        const bucket = (p as any).document_bucket
+        const spath = (p as any).document_path
+        const fname = (p as any).document_filename
+
+        if (fname) {
+          draw(`File: ${fname}`, 9)
+        }
+
+        if (bucket && spath) {
+          try {
+            const { data, error } = await supabaseAdmin.storage.from(bucket).createSignedUrl(spath, expiresIn)
+            const signedUrl = error ? null : (data?.signedUrl ?? null)
+            if (signedUrl) {
+              await drawQrOn(page, signedUrl, 520, y + 55, 60)
+              draw("QR: scan to download (10m)", 8)
+            }
+          } catch {
+            // ignore
+          }
+        }
+
 if (pSigned) {
   await drawQrOn(page, pSigned, 520, y + 55, 60)
   draw("QR: scan to download (10m)", 8)
 }
 
-        // Policy document QR (if uploaded)
-        const fileName = (p as any).document_filename ?? ""
-        const signed = policyDocUrlById[String((p as any).id)]
-        if (fileName) {
-          draw(`File: ${fileName}`, 9)
-        }
         if (signed) {
           await drawQrOn(page, signed, 520, y + 55, 60)
           draw("QR: scan to download (10m)", 8)
