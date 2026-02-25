@@ -18,7 +18,16 @@ type Policy = {
   effective_date: string | null
   expiry_date: string
   coverage_amount: number | null
+
+  // legacy column (kept)
   document_path: string | null
+
+  // new doc metadata (Step 22B.0)
+  document_bucket: string | null
+  document_filename: string | null
+  document_content_type: string | null
+  document_size_bytes: number | null
+
   notes: string | null
   created_at: string
   updated_at: string
@@ -41,6 +50,10 @@ export default function InsurancePage() {
   const [saving, setSaving] = useState(false)
   const [mode, setMode] = useState<"create" | "edit">("create")
   const [editId, setEditId] = useState<string>("")
+
+  // upload/download UI state
+  const [uploadingId, setUploadingId] = useState<string>("")
+  const [downloadingId, setDownloadingId] = useState<string>("")
 
   // form fields
   const [provider, setProvider] = useState("")
@@ -233,6 +246,58 @@ export default function InsurancePage() {
     }
   }
 
+  async function uploadForPolicy(e: React.FormEvent<HTMLFormElement>, policyId: string) {
+    e.preventDefault()
+    if (!orgId) return
+
+    // Capture before awaits
+    const formEl = e.currentTarget
+    const fileInput = formEl.querySelector('input[type="file"]') as HTMLInputElement | null
+
+    const form = new FormData(formEl)
+    form.set("org_id", orgId)
+    form.set("policy_id", policyId)
+
+    setUploadingId(policyId)
+    setErr("")
+    setSuccess("")
+    try {
+      const res = await fetch("/api/insurance/upload", { method: "POST", body: form })
+      const json = await res.json()
+      if (!json?.ok) {
+        setErr(json?.error ?? "Upload failed")
+        return
+      }
+      await loadPolicies(orgId)
+      if (fileInput) fileInput.value = ""
+      setSuccess("Policy document uploaded.")
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (ex: any) {
+      setErr(ex?.message ?? "Upload failed")
+    } finally {
+      setUploadingId("")
+    }
+  }
+
+  async function downloadPolicyDoc(policyId: string) {
+    if (!orgId) return
+    setDownloadingId(policyId)
+    setErr("")
+    try {
+      const res = await fetch(`/api/insurance/doc-url?org_id=${orgId}&policy_id=${policyId}&expires=600`, { cache: "no-store" })
+      const json = await res.json()
+      if (!json?.ok || !json?.url) {
+        setErr(json?.error ?? "No download URL available")
+        return
+      }
+      window.open(json.url, "_blank")
+    } catch (ex: any) {
+      setErr(ex?.message ?? "Failed to get download URL")
+    } finally {
+      setDownloadingId("")
+    }
+  }
+
   useEffect(() => {
     loadOrgs()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -277,11 +342,7 @@ export default function InsurancePage() {
             </select>
           </div>
 
-          <button
-            className="h-10 rounded bg-black px-4 text-white disabled:opacity-50"
-            onClick={() => loadPolicies(orgId)}
-            disabled={!orgId || loading}
-          >
+          <button className="h-10 rounded bg-black px-4 text-white disabled:opacity-50" onClick={() => loadPolicies(orgId)} disabled={!orgId || loading}>
             {loading ? "Loading..." : "Refresh"}
           </button>
 
@@ -314,26 +375,52 @@ export default function InsurancePage() {
                   <th className="p-2">Effective</th>
                   <th className="p-2">Expiry</th>
                   <th className="p-2">Coverage</th>
+                  <th className="p-2">Doc</th>
                   <th className="p-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((p) => (
-                  <tr key={p.id} className="border-b">
+                  <tr key={p.id} className="border-b align-top">
                     <td className="p-2 font-medium">{p.provider}</td>
                     <td className="p-2">{p.policy_type}</td>
                     <td className="p-2 font-mono">{p.policy_number ?? "-"}</td>
                     <td className="p-2 font-mono">{p.effective_date ?? "-"}</td>
                     <td className="p-2 font-mono">{p.expiry_date}</td>
                     <td className="p-2">{typeof p.coverage_amount === "number" ? p.coverage_amount.toLocaleString() : "-"}</td>
+
                     <td className="p-2">
-                      <div className="flex items-center gap-2">
-                        <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" onClick={() => openEdit(p)} title="Edit">
-                          ✏️ Edit
-                        </button>
-                        <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" onClick={() => deletePolicy(p)} title="Delete">
-                          🗑️ Delete
-                        </button>
+                      <div className="text-xs text-gray-700">
+                        <div>{p.document_filename ?? "-"}</div>
+                        <div className="text-gray-500">{p.document_path ? "Uploaded" : "No file"}</div>
+                      </div>
+                    </td>
+
+                    <td className="p-2">
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" onClick={() => openEdit(p)} title="Edit">
+                            Edit
+                          </button>
+                          <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" onClick={() => deletePolicy(p)} title="Delete">
+                            Delete
+                          </button>
+                          <button
+                            className="rounded border px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-50"
+                            disabled={!p.document_path || downloadingId === p.id}
+                            onClick={() => downloadPolicyDoc(p.id)}
+                            title="Download policy doc"
+                          >
+                            {downloadingId === p.id ? "Loading..." : "Download"}
+                          </button>
+                        </div>
+
+                        <form onSubmit={(e) => uploadForPolicy(e, p.id)} className="flex items-center gap-2">
+                          <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.txt" required className="text-xs" />
+                          <button className="rounded bg-black px-2 py-1 text-xs text-white disabled:opacity-50" type="submit" disabled={uploadingId === p.id}>
+                            {uploadingId === p.id ? "Uploading..." : "Upload/Replace"}
+                          </button>
+                        </form>
                       </div>
                     </td>
                   </tr>
@@ -353,14 +440,8 @@ export default function InsurancePage() {
                 <div className="text-sm text-gray-600">{modalTitle}</div>
                 <div className="text-lg font-semibold">{selectedOrg?.name ?? "Organization"}</div>
               </div>
-              <button
-                className="rounded border px-2 py-1 text-sm hover:bg-gray-50"
-                type="button"
-                onClick={() => setOpen(false)}
-                disabled={saving}
-                title="Close"
-              >
-                ✕
+              <button className="rounded border px-2 py-1 text-sm hover:bg-gray-50" type="button" onClick={() => setOpen(false)} disabled={saving} title="Close">
+                X
               </button>
             </div>
 
