@@ -4,6 +4,17 @@ export async function GET(req: Request) {
   try {
     const supabaseAdmin = getSupabaseAdmin()
 
+    async function signedUrl(bucket: string | null, path: string | null, expiresIn = 600) {
+      try {
+        if (!bucket || !path) return null
+        const { data, error } = await supabaseAdmin.storage.from(bucket).createSignedUrl(path, expiresIn)
+        if (error) return null
+        return data?.signedUrl ?? null
+      } catch {
+        return null
+      }
+    }
+
     const url = new URL(req.url)
     const orgId = (url.searchParams.get("org_id") ?? "").trim()
 
@@ -114,18 +125,28 @@ export async function GET(req: Request) {
       summary: {
         total_items: items.length,
         items_with_latest_doc: Object.keys(latestDocsByItem).length,
-        total_insurance_policies: insurance_policies.length,
+        total_insurance_policies: policies.length,
         total_subcontractors: subcontractors.length,
-        total_subcontractor_documents: subcontractor_documents.length,
+        total_subcontractor_documents: subDocs.length,
       },
+      insurance_policies: await Promise.all(
+        (policies ?? []).map(async (p: any) => ({
+          ...p,
+          document_signed_url: await signedUrl(p.document_bucket ?? null, p.document_path ?? null, 600),
+        }))
+      ),
+      subcontractors: subcontractors ?? [],
+      subcontractor_documents: await Promise.all(
+        (subDocs ?? []).map(async (d: any) => ({
+          ...d,
+          signed_url: await signedUrl(d.storage_bucket ?? null, d.storage_path ?? null, 600),
+        }))
+      ),
       items: items.map((i) => ({
         ...i,
         latest_doc: latestDocsByItem[i.id] ?? null,
         latest_doc_signed_url: latestDocUrlByItem[i.id] ?? null,
       })),
-      insurance_policies,
-      subcontractors,
-      subcontractor_documents,
     }
 
     // Audit log - best effort
