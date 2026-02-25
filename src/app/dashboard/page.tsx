@@ -389,12 +389,10 @@ Dev user: <span className="font-mono">{DEV_USER_ID}</span>
 <div className="text-sm text-gray-600">
 {selectedOrg ? (
 <span className="font-mono">{selectedOrg.id}</span>
-) : null}
-</div>
-{typeof lastScheduled === "number" ? (
-<div className="text-xs text-gray-600">Scheduled: {lastScheduled}</div>
-) : null}
-</div>
+) : null}          {typeof lastScheduled === "number" ? (
+            <div className="text-xs text-gray-600">Scheduled: {lastScheduled}</div>
+          ) : null}
+        </div>
 </section>
 <section className="grid gap-6 md:grid-cols-2">
 <div className="rounded-lg border p-4 space-y-4">
