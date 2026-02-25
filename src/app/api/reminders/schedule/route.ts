@@ -21,9 +21,7 @@ export async function POST(req: Request) {
       .select("id, org_id, title, expires_on, renewal_window_days")
       .eq("org_id", orgId)
 
-    if (itemsErr) {
-      return Response.json({ ok: false, error: itemsErr.message }, { status: 500 })
-    }
+    if (itemsErr) return Response.json({ ok: false, error: itemsErr.message }, { status: 500 })
 
     // Load insurance policies for org
     const { data: policies, error: polErr } = await supabaseAdmin
@@ -31,19 +29,28 @@ export async function POST(req: Request) {
       .select("id, org_id, provider, policy_type, policy_number, effective_date, expiry_date")
       .eq("org_id", orgId)
 
-    if (polErr) {
-      return Response.json({ ok: false, error: polErr.message }, { status: 500 })
-    }
+    if (polErr) return Response.json({ ok: false, error: polErr.message }, { status: 500 })
 
-    // Load subcontractor docs with expirations (join subcontractor name)
-    const { data: subDocs, error: subErr } = await supabaseAdmin
-      .from("subcontractor_documents")
-      .select("id, org_id, subcontractor_id, doc_type, title, expires_on, subcontractor:subcontractors(name)")
+    // Load subcontractors (for name mapping)
+    const { data: subs, error: subsErr } = await supabaseAdmin
+      .from("subcontractors")
+      .select("id, org_id, name")
       .eq("org_id", orgId)
 
-    if (subErr) {
-      return Response.json({ ok: false, error: subErr.message }, { status: 500 })
+    if (subsErr) return Response.json({ ok: false, error: subsErr.message }, { status: 500 })
+
+    const subNameById: Record<string, string> = {}
+    for (const s of subs ?? []) {
+      if (s?.id) subNameById[String(s.id)] = String(s.name ?? "")
     }
+
+    // Load subcontractor docs with expirations (no join; map names ourselves)
+    const { data: subDocs, error: subErr } = await supabaseAdmin
+      .from("subcontractor_documents")
+      .select("id, org_id, subcontractor_id, doc_type, title, expires_on")
+      .eq("org_id", orgId)
+
+    if (subErr) return Response.json({ ok: false, error: subErr.message }, { status: 500 })
 
     const reminderOffsets = [30, 14, 7, 1] // days before expiry
 
@@ -104,7 +111,7 @@ export async function POST(req: Request) {
 
         scheduledRows.push({
           org_id: orgId,
-          item_id: p.id, // reuse as generic entity id
+          item_id: p.id,
           channel: "email",
           kind: "pre_expiry",
           scheduled_for: when.toISOString(),
@@ -120,7 +127,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3) Subcontractor documents (expiring)
+    // 3) Subcontractor documents
     for (const d of subDocs ?? []) {
       if (!d?.expires_on) continue
       const exp = parseDateOnly(d.expires_on)
@@ -129,7 +136,8 @@ export async function POST(req: Request) {
       if (daysLeft < 0) continue
       if (daysLeft > maxDays) continue
 
-      const subName = (d as any)?.subcontractor?.name ?? ""
+      const subId = String(d.subcontractor_id ?? "")
+      const subName = subNameById[subId] ?? ""
 
       for (const offset of reminderOffsets) {
         const when = addDays(exp, -offset)
@@ -137,14 +145,14 @@ export async function POST(req: Request) {
 
         scheduledRows.push({
           org_id: orgId,
-          item_id: d.id, // doc id
+          item_id: d.id,
           channel: "email",
           kind: "pre_expiry",
           scheduled_for: when.toISOString(),
           meta: {
             entity: "subcontractor_document",
             offset_days: offset,
-            subcontractor_id: d.subcontractor_id,
+            subcontractor_id: subId,
             subcontractor_name: subName,
             doc_type: d.doc_type,
             title: d.title ?? null,
@@ -166,9 +174,7 @@ export async function POST(req: Request) {
       .eq("org_id", orgId)
       .in("item_id", itemIds)
 
-    if (existErr) {
-      return Response.json({ ok: false, error: existErr.message }, { status: 500 })
-    }
+    if (existErr) return Response.json({ ok: false, error: existErr.message }, { status: 500 })
 
     const existingKey = new Set(
       (existing ?? []).map(
@@ -186,9 +192,7 @@ export async function POST(req: Request) {
     }
 
     const { error: insErr } = await supabaseAdmin.from("reminder_events").insert(toInsert)
-    if (insErr) {
-      return Response.json({ ok: false, error: insErr.message }, { status: 500 })
-    }
+    if (insErr) return Response.json({ ok: false, error: insErr.message }, { status: 500 })
 
     return Response.json({ ok: true, org_id: orgId, days: maxDays, scheduled: toInsert.length })
   } catch (e: any) {
