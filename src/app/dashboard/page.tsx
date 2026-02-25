@@ -505,6 +505,22 @@ View reminders
           >
             Subcontractors
           </button>
+          <button
+            className="h-10 rounded border px-4 text-sm"
+            onClick={() => { window.location.href = "/insurance" }}
+            disabled={!orgId}
+            title="Go to Insurance Tracking"
+          >
+            Insurance
+          </button>
+          <button
+            className="h-10 rounded border px-4 text-sm"
+            onClick={() => { window.location.href = "/subcontractors" }}
+            disabled={!orgId}
+            title="Go to Subcontractors"
+          >
+            Subcontractors
+          </button>
 <div className="text-sm text-gray-600">
 {selectedOrg ? (
 <span className="font-mono">{selectedOrg.id}</span>
