@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     // Load compliance items for org
     const { data: items, error: itemsErr } = await supabaseAdmin
       .from("compliance_items")
-      .select("id, org_id, title, expires_on, renewal_window_days")
+      .select("id, org_id, title, expires_on")
       .eq("org_id", orgId)
 
     if (itemsErr) return Response.json({ ok: false, error: itemsErr.message }, { status: 500 })
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     // Load insurance policies for org
     const { data: policies, error: polErr } = await supabaseAdmin
       .from("insurance_policies")
-      .select("id, org_id, provider, policy_type, policy_number, effective_date, expiry_date")
+      .select("id, org_id, provider, policy_type, policy_number, expiry_date")
       .eq("org_id", orgId)
 
     if (polErr) return Response.json({ ok: false, error: polErr.message }, { status: 500 })
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       if (s?.id) subNameById[String(s.id)] = String(s.name ?? "")
     }
 
-    // Load subcontractor docs with expirations (no join; map names ourselves)
+    // Load subcontractor docs with expirations
     const { data: subDocs, error: subErr } = await supabaseAdmin
       .from("subcontractor_documents")
       .select("id, org_id, subcontractor_id, doc_type, title, expires_on")
@@ -67,12 +67,31 @@ export async function POST(req: Request) {
     const now = new Date()
     const scheduledRows: any[] = []
 
+    // Helper to push a reminder row
+    function pushRow(args: {
+      entity_type: string
+      entity_id: string
+      item_id?: string | null
+      whenIso: string
+      meta: any
+    }) {
+      scheduledRows.push({
+        org_id: orgId,
+        item_id: args.item_id ?? null, // only for compliance_item
+        entity_type: args.entity_type,
+        entity_id: args.entity_id,
+        channel: "email",
+        kind: "pre_expiry",
+        scheduled_for: args.whenIso,
+        meta: args.meta,
+      })
+    }
+
     // 1) Compliance items
     for (const it of items ?? []) {
       if (!it?.expires_on) continue
       const exp = parseDateOnly(it.expires_on)
       const daysLeft = daysBetween(now, exp)
-
       if (daysLeft < 0) continue
       if (daysLeft > maxDays) continue
 
@@ -80,18 +99,12 @@ export async function POST(req: Request) {
         const when = addDays(exp, -offset)
         if (when.getTime() <= Date.now()) continue
 
-        scheduledRows.push({
-          org_id: orgId,
-          item_id: it.id,
-          channel: "email",
-          kind: "pre_expiry",
-          scheduled_for: when.toISOString(),
-          meta: {
-            entity: "compliance_item",
-            offset_days: offset,
-            title: it.title,
-            expires_on: it.expires_on,
-          },
+        pushRow({
+          entity_type: "compliance_item",
+          entity_id: String(it.id),
+          item_id: String(it.id),
+          whenIso: when.toISOString(),
+          meta: { entity: "compliance_item", offset_days: offset, title: it.title, expires_on: it.expires_on },
         })
       }
     }
@@ -101,7 +114,6 @@ export async function POST(req: Request) {
       if (!p?.expiry_date) continue
       const exp = parseDateOnly(p.expiry_date)
       const daysLeft = daysBetween(now, exp)
-
       if (daysLeft < 0) continue
       if (daysLeft > maxDays) continue
 
@@ -109,12 +121,11 @@ export async function POST(req: Request) {
         const when = addDays(exp, -offset)
         if (when.getTime() <= Date.now()) continue
 
-        scheduledRows.push({
-          org_id: orgId,
-          item_id: p.id,
-          channel: "email",
-          kind: "pre_expiry",
-          scheduled_for: when.toISOString(),
+        pushRow({
+          entity_type: "insurance_policy",
+          entity_id: String(p.id),
+          item_id: null,
+          whenIso: when.toISOString(),
           meta: {
             entity: "insurance_policy",
             offset_days: offset,
@@ -132,7 +143,6 @@ export async function POST(req: Request) {
       if (!d?.expires_on) continue
       const exp = parseDateOnly(d.expires_on)
       const daysLeft = daysBetween(now, exp)
-
       if (daysLeft < 0) continue
       if (daysLeft > maxDays) continue
 
@@ -143,12 +153,11 @@ export async function POST(req: Request) {
         const when = addDays(exp, -offset)
         if (when.getTime() <= Date.now()) continue
 
-        scheduledRows.push({
-          org_id: orgId,
-          item_id: d.id,
-          channel: "email",
-          kind: "pre_expiry",
-          scheduled_for: when.toISOString(),
+        pushRow({
+          entity_type: "subcontractor_document",
+          entity_id: String(d.id),
+          item_id: null,
+          whenIso: when.toISOString(),
           meta: {
             entity: "subcontractor_document",
             offset_days: offset,
@@ -162,28 +171,32 @@ export async function POST(req: Request) {
       }
     }
 
-    const itemIds = Array.from(new Set(scheduledRows.map((r) => r.item_id)))
-
-    if (itemIds.length === 0) {
+    if (scheduledRows.length === 0) {
       return Response.json({ ok: true, org_id: orgId, days: maxDays, scheduled: 0 })
     }
 
+    // Dedupe by (org_id, entity_type, entity_id, channel, kind, scheduled_for)
+    const entityKeys = Array.from(
+      new Set(scheduledRows.map((r) => `${r.entity_type}|${r.entity_id}`))
+    )
+
+    // Load existing for this org (small scale; acceptable for MVP)
     const { data: existing, error: existErr } = await supabaseAdmin
       .from("reminder_events")
-      .select("item_id, channel, kind, scheduled_for")
+      .select("entity_type, entity_id, channel, kind, scheduled_for")
       .eq("org_id", orgId)
-      .in("item_id", itemIds)
 
     if (existErr) return Response.json({ ok: false, error: existErr.message }, { status: 500 })
 
     const existingKey = new Set(
       (existing ?? []).map(
-        (r: any) => `${r.item_id}|${r.channel}|${r.kind}|${new Date(r.scheduled_for).toISOString()}`
+        (r: any) =>
+          `${r.entity_type}|${r.entity_id}|${r.channel}|${r.kind}|${new Date(r.scheduled_for).toISOString()}`
       )
     )
 
     const toInsert = scheduledRows.filter((r) => {
-      const k = `${r.item_id}|${r.channel}|${r.kind}|${new Date(r.scheduled_for).toISOString()}`
+      const k = `${r.entity_type}|${r.entity_id}|${r.channel}|${r.kind}|${new Date(r.scheduled_for).toISOString()}`
       return !existingKey.has(k)
     })
 
