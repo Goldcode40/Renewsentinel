@@ -52,3 +52,6 @@ _schema.sql
 _remote_schema.sql
 _remote_schema2.sql
 
+_pp_body.txt
+_pp_headers.txt
+src/app/api/proof-pack/route.ts.bak_*
