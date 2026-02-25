@@ -207,6 +207,17 @@ export async function GET(req: Request) {
         draw(`Policy #: ${num || "-"}   Coverage: ${cov || "-"}`, 10)
                 draw(`Effective: ${eff || "-"}   Expiry: ${exp || "-"}`, 10)
 
+// Policy document QR (if uploaded)
+const pFile = (p as any).document_filename ?? ""
+const pSigned = (typeof policyDocUrlById !== "undefined") ? policyDocUrlById[String((p as any).id)] : null
+if (pFile) {
+  draw(`File: ${pFile}`, 9)
+}
+if (pSigned) {
+  await drawQrOn(page, pSigned, 520, y + 55, 60)
+  draw("QR: scan to download (10m)", 8)
+}
+
         // Policy document QR (if uploaded)
         const fileName = (p as any).document_filename ?? ""
         const signed = policyDocUrlById[String((p as any).id)]
