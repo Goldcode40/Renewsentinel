@@ -42,7 +42,25 @@ export async function GET(req: Request) {
       .order("expiry_date", { ascending: true })
 
     if (insRes.error) return Response.json({ ok: false, error: insRes.error.message }, { status: 500 })
-    const policies = insRes.data ?? []
+        const policies = insRes.data ?? []
+
+    // Signed URLs for insurance policy docs (10 minutes)
+    const policyDocUrlById: Record<string, string | null> = {}
+    const expiresIn = 600
+    for (const p of policies) {
+      const bucket = (p as any)?.document_bucket
+      const path = (p as any)?.document_path
+      if (!bucket || !path) {
+        policyDocUrlById[String((p as any)?.id)] = null
+        continue
+      }
+      const { data, error } = await supabaseAdmin.storage.from(bucket).createSignedUrl(path, expiresIn)
+      if (error) {
+        policyDocUrlById[String((p as any)?.id)] = null
+        continue
+      }
+      policyDocUrlById[String((p as any)?.id)] = data?.signedUrl ?? null
+    }
 
     // subcontractors
     const subsRes = await supabaseAdmin
@@ -188,7 +206,18 @@ export async function GET(req: Request) {
         const cov = typeof p.coverage_amount === "number" ? String(p.coverage_amount) : ""
         draw(`${type} | ${provider}`, 12, true)
         draw(`Policy #: ${num || "-"}   Coverage: ${cov || "-"}`, 10)
-        draw(`Effective: ${eff || "-"}   Expiry: ${exp || "-"}`, 10)
+                draw(`Effective: ${eff || "-"}   Expiry: ${exp || "-"}`, 10)
+
+        // Policy document QR (if uploaded)
+        const fileName = (p as any).document_filename ?? ""
+        const signed = policyDocUrlById[String((p as any).id)]
+        if (fileName) {
+          draw(`File: ${fileName}`, 9)
+        }
+        if (signed) {
+          await drawQrOn(page, signed, 520, y + 55, 60)
+          draw("QR: scan to download (10m)", 8)
+        }
         y -= 8
       }
     }
