@@ -34,6 +34,16 @@ export async function GET(req: Request) {
     const items = itemsRes.data ?? []
     const itemIds = items.map((i) => i.id)
 
+    // insurance
+    const insRes = await supabaseAdmin
+      .from("insurance_policies")
+      .select("id, org_id, provider, policy_number, policy_type, effective_date, expiry_date, coverage_amount, created_at, updated_at")
+      .eq("org_id", orgId)
+      .order("expiry_date", { ascending: true })
+
+    if (insRes.error) return Response.json({ ok: false, error: insRes.error.message }, { status: 500 })
+    const policies = insRes.data ?? []
+
     // latest doc per item
     const latestDocsByItem: Record<string, any> = {}
     const latestDocUrlByItem: Record<string, string | null> = {}
@@ -79,7 +89,6 @@ export async function GET(req: Request) {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
     async function drawQr(url: string, x: number, yTop: number, size: number) {
-      // generate a small PNG data url and embed as image
       const dataUrl = await QRCode.toDataURL(url, { margin: 0, width: 200 })
       const base64 = dataUrl.split(",")[1]
       const bytes = Buffer.from(base64, "base64")
@@ -107,9 +116,38 @@ export async function GET(req: Request) {
     y -= 8
 
     draw(`Items: ${items.length} (with latest doc: ${Object.keys(latestDocsByItem).length})`, 11, true)
-    y -= 6
+    draw(`Insurance policies: ${policies.length}`, 11, true)
+    y -= 10
 
-    // Items list (simple; wraps by truncation)
+    // --- Insurance section ---
+    draw("Insurance Policies", 14, true)
+    y -= 4
+
+    if (policies.length === 0) {
+      draw("None", 11)
+      y -= 8
+    } else {
+      for (const p of policies) {
+        ensureSpace(160)
+        const provider = p.provider ?? ""
+        const type = p.policy_type ?? ""
+        const num = p.policy_number ?? ""
+        const eff = p.effective_date ?? ""
+        const exp = p.expiry_date ?? ""
+        const cov = typeof p.coverage_amount === "number" ? String(p.coverage_amount) : ""
+
+        draw(`${type} | ${provider}`, 12, true)
+        draw(`Policy #: ${num || "-"}   Coverage: ${cov || "-"}`, 10)
+        draw(`Effective: ${eff || "-"}   Expiry: ${exp || "-"}`, 10)
+        y -= 8
+      }
+    }
+
+    y -= 6
+    draw("Compliance Items", 14, true)
+    y -= 4
+
+    // Items list
     for (const it of items) {
       ensureSpace(180)
       const expires = it.expires_on ?? ""
@@ -127,7 +165,6 @@ export async function GET(req: Request) {
       if (doc) {
         draw(`Latest doc: ${doc.filename} (${doc.content_type ?? "unknown"})`, 10)
         if (docUrl) {
-          // QR code for quick access
           await drawQr(docUrl, 520, y + 40, 70)
           draw(`QR: scan to download (10m)`, 8)
         } else {
@@ -139,14 +176,12 @@ export async function GET(req: Request) {
 
       y -= 8
       if (y < 120) {
-        // start a new page if we're running low
         y = 792 - margin
         page = pdfDoc.addPage([612, 792])
       }
     }
 
     // --- Audit Summary (v0) ---
-    // Lightweight audit trail snapshot using existing timestamps.
     {
       let p = pdfDoc.addPage([612, 792])
       const x0 = margin
@@ -161,6 +196,26 @@ export async function GET(req: Request) {
       t(`Org: ${orgRes.data.name} (${orgRes.data.id})`, 10)
       t(`Generated: ${new Date().toISOString()}`, 10)
       yy -= 10
+
+      t("Insurance (timestamps)", 12, true)
+      yy -= 4
+
+      if (policies.length === 0) {
+        t("None", 10)
+        yy -= 8
+      } else {
+        for (const pcy of policies) {
+          t(`${pcy.policy_type ?? ""} | ${pcy.provider ?? ""}`, 11, true)
+          t(`Policy ID: ${pcy.id}`, 8)
+          t(`Created: ${pcy.created_at ?? "n/a"}   Updated: ${pcy.updated_at ?? "n/a"}`, 8)
+          t(`Effective: ${pcy.effective_date ?? "n/a"}   Expiry: ${pcy.expiry_date ?? "n/a"}`, 8)
+          yy -= 8
+          if (yy < 120) {
+            p = pdfDoc.addPage([612, 792])
+            yy = 792 - margin
+          }
+        }
+      }
 
       t("Items (timestamps)", 12, true)
       yy -= 4
@@ -187,8 +242,8 @@ export async function GET(req: Request) {
         }
       }
     }
+
     // --- Attachments Index (v0) ---
-    // One place to review proofs without hunting.
     {
       let p = pdfDoc.addPage([612, 792])
       const x0 = margin
@@ -217,7 +272,6 @@ export async function GET(req: Request) {
         t(`Path: ${doc.storage_bucket}/${doc.storage_path}`, 8)
 
         if (docUrl) {
-          // place QR on the right for this attachment row
           await (async () => {
             const dataUrl = await QRCode.toDataURL(docUrl, { margin: 0, width: 200 })
             const base64 = dataUrl.split(",")[1]
@@ -237,7 +291,27 @@ export async function GET(req: Request) {
         }
       }
     }
+
     const pdfBytes = await pdfDoc.save()
+
+    // Audit log (best effort)
+    try {
+      await supabaseAdmin.from("audit_log_events").insert({
+        org_id: orgId,
+        actor_user_id: "00000000-0000-0000-0000-000000000001",
+        actor_role: "owner",
+        action: "proofpack.exported.pdf",
+        entity_type: "proof_pack",
+        entity_id: null,
+        details: {
+          total_items: items.length,
+          items_with_latest_doc: Object.keys(latestDocsByItem).length,
+          total_insurance_policies: policies.length,
+        },
+      })
+    } catch (_) {
+      // ignore
+    }
 
     return new Response(Buffer.from(pdfBytes), {
       status: 200,
@@ -250,12 +324,3 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
-
-
-
-
-
-
-
-
-
