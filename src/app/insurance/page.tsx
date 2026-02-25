@@ -39,6 +39,8 @@ export default function InsurancePage() {
   // modal
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [mode, setMode] = useState<"create" | "edit">("create")
+  const [editId, setEditId] = useState<string>("")
 
   // form fields
   const [provider, setProvider] = useState("")
@@ -93,6 +95,31 @@ export default function InsurancePage() {
     setExpiryDate("")
     setCoverageAmount("")
     setNotes("")
+    setEditId("")
+    setMode("create")
+  }
+
+  function openCreate() {
+    setErr("")
+    setSuccess("")
+    resetForm()
+    setMode("create")
+    setOpen(true)
+  }
+
+  function openEdit(p: Policy) {
+    setErr("")
+    setSuccess("")
+    setMode("edit")
+    setEditId(p.id)
+    setProvider(p.provider ?? "")
+    setPolicyType(p.policy_type ?? "")
+    setPolicyNumber(p.policy_number ?? "")
+    setEffectiveDate(p.effective_date ?? "")
+    setExpiryDate(p.expiry_date ?? "")
+    setCoverageAmount(typeof p.coverage_amount === "number" ? String(p.coverage_amount) : "")
+    setNotes(p.notes ?? "")
+    setOpen(true)
   }
 
   async function createPolicy() {
@@ -129,13 +156,80 @@ export default function InsurancePage() {
       resetForm()
       setSuccess("Insurance policy saved.")
       await loadPolicies(orgId)
-
-      // auto-clear success after 4s
       setTimeout(() => setSuccess(""), 4000)
     } catch (e: any) {
       setErr(e?.message ?? "Create failed")
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function updatePolicy() {
+    if (!orgId) return
+    if (!editId) return
+    if (!provider.trim()) return setErr("Provider is required")
+    if (!policyType.trim()) return setErr("Policy type is required")
+    if (!expiryDate.trim()) return setErr("Expiry date is required")
+
+    setSaving(true)
+    setErr("")
+    setSuccess("")
+    try {
+      const res = await fetch(`/api/insurance/${editId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          org_id: orgId,
+          provider: provider.trim(),
+          policy_type: policyType.trim(),
+          policy_number: policyNumber.trim() || null,
+          effective_date: effectiveDate.trim() || null,
+          expiry_date: expiryDate.trim(),
+          coverage_amount: coverageAmount.trim() ? Number(coverageAmount.trim()) : null,
+          notes: notes.trim() || null,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setErr(json?.error ?? "Update failed")
+        return
+      }
+
+      setOpen(false)
+      resetForm()
+      setSuccess("Insurance policy updated.")
+      await loadPolicies(orgId)
+      setTimeout(() => setSuccess(""), 4000)
+    } catch (e: any) {
+      setErr(e?.message ?? "Update failed")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function deletePolicy(p: Policy) {
+    if (!orgId) return
+    const ok = confirm(`Delete policy "${p.provider} - ${p.policy_type}"?`)
+    if (!ok) return
+
+    setErr("")
+    setSuccess("")
+    try {
+      const res = await fetch(`/api/insurance/${p.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ org_id: orgId }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json?.ok) {
+        setErr(json?.error ?? "Delete failed")
+        return
+      }
+      setSuccess("Policy deleted.")
+      await loadPolicies(orgId)
+      setTimeout(() => setSuccess(""), 3000)
+    } catch (e: any) {
+      setErr(e?.message ?? "Delete failed")
     }
   }
 
@@ -148,6 +242,10 @@ export default function InsurancePage() {
     if (orgId) loadPolicies(orgId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId])
+
+  const modalTitle = mode === "edit" ? "Edit insurance policy" : "Add insurance policy"
+  const saveLabel = mode === "edit" ? "Save changes" : "Save policy"
+  const onSave = mode === "edit" ? updatePolicy : createPolicy
 
   return (
     <main className="mx-auto max-w-5xl p-6 space-y-6">
@@ -187,7 +285,7 @@ export default function InsurancePage() {
             {loading ? "Loading..." : "Refresh"}
           </button>
 
-          <button className="h-10 rounded border px-4" onClick={() => { setErr(""); setOpen(true); }} disabled={!orgId}>
+          <button className="h-10 rounded border px-4" onClick={openCreate} disabled={!orgId}>
             + Add policy
           </button>
 
@@ -216,6 +314,7 @@ export default function InsurancePage() {
                   <th className="p-2">Effective</th>
                   <th className="p-2">Expiry</th>
                   <th className="p-2">Coverage</th>
+                  <th className="p-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -227,6 +326,16 @@ export default function InsurancePage() {
                     <td className="p-2 font-mono">{p.effective_date ?? "-"}</td>
                     <td className="p-2 font-mono">{p.expiry_date}</td>
                     <td className="p-2">{typeof p.coverage_amount === "number" ? p.coverage_amount.toLocaleString() : "-"}</td>
+                    <td className="p-2">
+                      <div className="flex items-center gap-2">
+                        <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" onClick={() => openEdit(p)} title="Edit">
+                          ✏️ Edit
+                        </button>
+                        <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" onClick={() => deletePolicy(p)} title="Delete">
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -235,13 +344,13 @@ export default function InsurancePage() {
         )}
       </section>
 
-      {/* Add Policy Modal */}
+      {/* Add/Edit Policy Modal */}
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-lg bg-white p-4 shadow-lg">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-sm text-gray-600">Add insurance policy</div>
+                <div className="text-sm text-gray-600">{modalTitle}</div>
                 <div className="text-lg font-semibold">{selectedOrg?.name ?? "Organization"}</div>
               </div>
               <button
@@ -298,8 +407,8 @@ export default function InsurancePage() {
               <button className="h-10 rounded border px-4 text-sm hover:bg-gray-50 disabled:opacity-50" type="button" onClick={() => setOpen(false)} disabled={saving}>
                 Cancel
               </button>
-              <button className="h-10 rounded bg-black px-4 text-sm text-white disabled:opacity-50" type="button" onClick={createPolicy} disabled={saving}>
-                {saving ? "Saving..." : "Save policy"}
+              <button className="h-10 rounded bg-black px-4 text-sm text-white disabled:opacity-50" type="button" onClick={onSave} disabled={saving}>
+                {saving ? "Saving..." : saveLabel}
               </button>
             </div>
           </div>
