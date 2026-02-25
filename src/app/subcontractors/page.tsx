@@ -73,6 +73,8 @@ export default function SubcontractorsPage() {
   const [docsLoading, setDocsLoading] = useState(false)
   const [docsErr, setDocsErr] = useState("")
   const [docsSaving, setDocsSaving] = useState(false)
+  const [uploadingDocId, setUploadingDocId] = useState<string>("")
+  const [downloadingDocId, setDownloadingDocId] = useState<string>("")
 
   // docs form
   const [docType, setDocType] = useState("coi")
@@ -324,6 +326,52 @@ export default function SubcontractorsPage() {
     }
   }
 
+  async function downloadDoc(docId: string) {
+    if (!orgId) return
+    setDownloadingDocId(docId)
+    setDocsErr("")
+    try {
+      const res = await fetch(`/api/subcontractor-docs/doc-url?org_id=${orgId}&doc_id=${docId}&expires=600`, { cache: "no-store" })
+      const json = await res.json()
+      if (!json?.ok || !json?.url) {
+        setDocsErr(json?.error ?? "No download URL available")
+        return
+      }
+      window.open(json.url, "_blank")
+    } catch (e: any) {
+      setDocsErr(e?.message ?? "Failed to get download URL")
+    } finally {
+      setDownloadingDocId("")
+    }
+  }
+
+  async function uploadForDoc(e: React.FormEvent<HTMLFormElement>, subcontractorId: string, docId?: string) {
+    e.preventDefault()
+    if (!orgId) return
+
+    const form = new FormData(e.currentTarget)
+    form.set("org_id", orgId)
+    form.set("subcontractor_id", subcontractorId)
+    if (docId) form.set("doc_id", docId)
+
+    setUploadingDocId(docId || "__new__")
+    setDocsErr("")
+    try {
+      const res = await fetch("/api/subcontractor-docs/upload", { method: "POST", body: form })
+      const json = await res.json()
+      if (!json?.ok) {
+        setDocsErr(json?.error ?? "Upload failed")
+        return
+      }
+      await loadDocs(subcontractorId)
+      ;(e.currentTarget.querySelector('input[type="file"]') as HTMLInputElement | null)?.value && ((e.currentTarget.querySelector('input[type="file"]') as HTMLInputElement).value = "")
+    } catch (err: any) {
+      setDocsErr(err?.message ?? "Upload failed")
+    } finally {
+      setUploadingDocId("")
+    }
+  }
+
   useEffect(() => {
     loadOrgs()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -368,11 +416,7 @@ export default function SubcontractorsPage() {
             </select>
           </div>
 
-          <button
-            className="h-10 rounded bg-black px-4 text-white disabled:opacity-50"
-            onClick={() => loadSubs(orgId)}
-            disabled={!orgId || loading}
-          >
+          <button className="h-10 rounded bg-black px-4 text-white disabled:opacity-50" onClick={() => loadSubs(orgId)} disabled={!orgId || loading}>
             {loading ? "Loading..." : "Refresh"}
           </button>
 
@@ -447,13 +491,7 @@ export default function SubcontractorsPage() {
                 <div className="text-sm text-gray-600">{modalTitle}</div>
                 <div className="text-lg font-semibold">{selectedOrg?.name ?? "Organization"}</div>
               </div>
-              <button
-                className="rounded border px-2 py-1 text-sm hover:bg-gray-50"
-                type="button"
-                onClick={() => setOpen(false)}
-                disabled={saving}
-                title="Close"
-              >
+              <button className="rounded border px-2 py-1 text-sm hover:bg-gray-50" type="button" onClick={() => setOpen(false)} disabled={saving} title="Close">
                 ✕
               </button>
             </div>
@@ -511,19 +549,13 @@ export default function SubcontractorsPage() {
       {/* Docs Modal */}
       {docsOpen && docsFor ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-4 shadow-lg">
+          <div className="w-full max-w-3xl rounded-lg bg-white p-4 shadow-lg">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-sm text-gray-600">Documents</div>
                 <div className="text-lg font-semibold">{docsFor.name}</div>
               </div>
-              <button
-                className="rounded border px-2 py-1 text-sm hover:bg-gray-50"
-                type="button"
-                onClick={() => setDocsOpen(false)}
-                disabled={docsSaving}
-                title="Close"
-              >
+              <button className="rounded border px-2 py-1 text-sm hover:bg-gray-50" type="button" onClick={() => setDocsOpen(false)} disabled={docsSaving} title="Close">
                 ✕
               </button>
             </div>
@@ -578,21 +610,53 @@ export default function SubcontractorsPage() {
                         <th className="p-2">Title</th>
                         <th className="p-2">Expires</th>
                         <th className="p-2">File</th>
+                        <th className="p-2">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {docs.map((d) => (
-                        <tr key={d.id} className="border-b">
+                        <tr key={d.id} className="border-b align-top">
                           <td className="p-2 font-mono">{d.doc_type}</td>
                           <td className="p-2">{d.title ?? "-"}</td>
                           <td className="p-2 font-mono">{d.expires_on ?? "-"}</td>
                           <td className="p-2">{d.filename ?? "-"}</td>
+                          <td className="p-2">
+                            <div className="flex flex-col gap-2">
+                              <form onSubmit={(e) => uploadForDoc(e, docsFor.id, d.id)} className="flex items-center gap-2">
+                                <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.txt" required className="text-xs" />
+                                <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" type="submit" disabled={uploadingDocId === d.id}>
+                                  {uploadingDocId === d.id ? "Uploading..." : "Upload/Replace"}
+                                </button>
+                              </form>
+
+                              <button
+                                className="rounded border px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-50"
+                                disabled={!d.storage_path || downloadingDocId === d.id}
+                                onClick={() => downloadDoc(d.id)}
+                                title="Download latest file"
+                              >
+                                {downloadingDocId === d.id ? "Loading..." : "Download"}
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               )}
+            </div>
+
+            {/* Upload a brand-new file as its own doc row */}
+            <div className="mt-4 rounded border p-3">
+              <div className="text-sm font-medium">Quick upload (creates a new doc row)</div>
+              <div className="text-xs text-gray-600">If you just want to upload a file without creating a doc first.</div>
+              <form onSubmit={(e) => uploadForDoc(e, docsFor.id)} className="mt-2 flex flex-wrap items-center gap-2">
+                <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.txt" required className="text-xs" />
+                <button className="rounded bg-black px-3 py-2 text-xs text-white disabled:opacity-50" type="submit" disabled={uploadingDocId === "__new__"}>
+                  {uploadingDocId === "__new__" ? "Uploading..." : "Upload file"}
+                </button>
+              </form>
             </div>
           </div>
         </div>
