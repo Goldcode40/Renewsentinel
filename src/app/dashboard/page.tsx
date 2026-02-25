@@ -390,7 +390,8 @@ Dev user: <span className="font-mono">{DEV_USER_ID}</span>
 {selectedOrg ? (
 <span className="font-mono">{selectedOrg.id}</span>
 ) : null}
-</div>          {typeof lastScheduled === "number" ? (
+</div>
+{typeof lastScheduled === "number" ? (
 <div className="text-xs text-gray-600">Scheduled: {lastScheduled}</div>
 ) : null}
 </div>
