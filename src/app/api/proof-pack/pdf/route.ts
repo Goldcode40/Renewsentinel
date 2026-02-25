@@ -229,8 +229,6 @@ export async function GET(req: Request) {
           }
         }
 
-if (pSigned) {
-  await drawQrOn(page, pSigned, 520, y + 55, 60)
   draw("QR: scan to download (10m)", 8)
 }
 
