@@ -60,7 +60,7 @@ export async function GET(req: Request) {
     if (subIds.length > 0) {
       const docsRes = await supabaseAdmin
         .from("subcontractor_documents")
-        .select("id, org_id, subcontractor_id, doc_type, title, expires_on, filename, created_at, updated_at")
+        .select("id, org_id, subcontractor_id, doc_type, title, expires_on, filename, content_type, size_bytes, storage_bucket, storage_path, created_at, updated_at")
         .eq("org_id", orgId)
         .in("subcontractor_id", subIds)
         .order("created_at", { ascending: false })
@@ -76,7 +76,26 @@ export async function GET(req: Request) {
       docsBySub[sid].push(d)
     }
 
-    // latest doc per item
+    // Signed URLs for subcontractor docs (10 minutes)
+    const subDocUrlById: Record<string, string | null> = {}
+    const expiresIn = 600
+    for (const d of subDocs) {
+      if (!d?.storage_bucket || !d?.storage_path) {
+        subDocUrlById[String(d.id)] = null
+        continue
+      }
+      const { data, error } = await supabaseAdmin.storage
+        .from(d.storage_bucket)
+        .createSignedUrl(d.storage_path, expiresIn)
+
+      if (error) {
+        subDocUrlById[String(d.id)] = null
+        continue
+      }
+      subDocUrlById[String(d.id)] = data?.signedUrl ?? null
+    }
+
+    // latest doc per compliance item
     const latestDocsByItem: Record<string, any> = {}
     const latestDocUrlByItem: Record<string, string | null> = {}
 
@@ -94,7 +113,6 @@ export async function GET(req: Request) {
         if (!latestDocsByItem[d.item_id]) latestDocsByItem[d.item_id] = d
       }
 
-      const expiresIn = 600
       for (const itemId of Object.keys(latestDocsByItem)) {
         const doc = latestDocsByItem[itemId]
         if (!doc?.storage_bucket || !doc?.storage_path) {
@@ -120,12 +138,13 @@ export async function GET(req: Request) {
     let page = pdfDoc.addPage([612, 792]) // US Letter
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-    async function drawQr(url: string, x: number, yTop: number, size: number) {
-      const dataUrl = await QRCode.toDataURL(url, { margin: 0, width: 200 })
+
+    async function drawQrOn(p: any, qrUrl: string, x: number, yTop: number, size: number) {
+      const dataUrl = await QRCode.toDataURL(qrUrl, { margin: 0, width: 200 })
       const base64 = dataUrl.split(",")[1]
       const bytes = Buffer.from(base64, "base64")
       const img = await pdfDoc.embedPng(bytes)
-      page.drawImage(img, { x, y: yTop - size, width: size, height: size })
+      p.drawImage(img, { x, y: yTop - size, width: size, height: size })
     }
 
     const margin = 40
@@ -174,7 +193,7 @@ export async function GET(req: Request) {
       }
     }
 
-    // --- Subcontractors section ---
+    // --- Subcontractors section (with QR for docs) ---
     y -= 6
     draw("Subcontractors", 14, true)
     y -= 4
@@ -184,7 +203,7 @@ export async function GET(req: Request) {
       y -= 8
     } else {
       for (const s of subcontractors) {
-        ensureSpace(180)
+        ensureSpace(200)
         draw(`${s.name ?? ""}${s.trade ? ` (${s.trade})` : ""}`, 12, true)
         draw(`Contact: ${s.contact_name ?? "-"}   Email: ${s.email ?? "-"}   Phone: ${s.phone ?? "-"}`, 9)
         draw(`Active: ${s.is_active ? "Yes" : "No"}`, 9)
@@ -192,12 +211,28 @@ export async function GET(req: Request) {
         const docs = docsBySub[String(s.id)] ?? []
         if (docs.length === 0) {
           draw("Docs: none", 9)
-          y -= 6
+          y -= 8
         } else {
           draw(`Docs: ${docs.length}`, 9, true)
           for (const d of docs) {
-            ensureSpace(140)
-            draw(`- ${d.doc_type ?? ""} | ${d.title ?? "-"} | Expires: ${d.expires_on ?? "-"}`, 9)
+            ensureSpace(160)
+
+            const line = `- ${d.doc_type ?? ""} | ${d.title ?? "-"} | Expires: ${d.expires_on ?? "-"}`
+            draw(line, 9, false)
+
+            const file = d.filename ?? ""
+            if (file) draw(`  File: ${file}`, 8)
+
+            const signed = subDocUrlById[String(d.id)]
+            if (signed) {
+              // Put QR on the right side
+              await drawQrOn(page, signed, 520, y + 55, 60)
+              draw("  QR: scan to download (10m)", 8)
+            } else {
+              draw("  QR: none", 8)
+            }
+
+            y -= 6
           }
           y -= 6
         }
@@ -228,7 +263,7 @@ export async function GET(req: Request) {
       if (doc) {
         draw(`Latest doc: ${doc.filename} (${doc.content_type ?? "unknown"})`, 10)
         if (docUrl) {
-          await drawQr(docUrl, 520, y + 40, 70)
+          await drawQrOn(page, docUrl, 520, y + 40, 70)
           draw(`QR: scan to download (10m)`, 8)
         } else {
           draw(`QR: none`, 8)
