@@ -44,6 +44,38 @@ export async function GET(req: Request) {
     if (insRes.error) return Response.json({ ok: false, error: insRes.error.message }, { status: 500 })
     const policies = insRes.data ?? []
 
+    // subcontractors
+    const subsRes = await supabaseAdmin
+      .from("subcontractors")
+      .select("id, org_id, name, contact_name, email, phone, trade, is_active, created_at, updated_at")
+      .eq("org_id", orgId)
+      .order("name", { ascending: true })
+
+    if (subsRes.error) return Response.json({ ok: false, error: subsRes.error.message }, { status: 500 })
+    const subcontractors = subsRes.data ?? []
+    const subIds = subcontractors.map((s) => s.id)
+
+    // subcontractor docs
+    let subDocs: any[] = []
+    if (subIds.length > 0) {
+      const docsRes = await supabaseAdmin
+        .from("subcontractor_documents")
+        .select("id, org_id, subcontractor_id, doc_type, title, expires_on, filename, created_at, updated_at")
+        .eq("org_id", orgId)
+        .in("subcontractor_id", subIds)
+        .order("created_at", { ascending: false })
+
+      if (docsRes.error) return Response.json({ ok: false, error: docsRes.error.message }, { status: 500 })
+      subDocs = docsRes.data ?? []
+    }
+
+    const docsBySub: Record<string, any[]> = {}
+    for (const d of subDocs) {
+      const sid = String(d.subcontractor_id ?? "")
+      if (!docsBySub[sid]) docsBySub[sid] = []
+      docsBySub[sid].push(d)
+    }
+
     // latest doc per item
     const latestDocsByItem: Record<string, any> = {}
     const latestDocUrlByItem: Record<string, string | null> = {}
@@ -117,12 +149,12 @@ export async function GET(req: Request) {
 
     draw(`Items: ${items.length} (with latest doc: ${Object.keys(latestDocsByItem).length})`, 11, true)
     draw(`Insurance policies: ${policies.length}`, 11, true)
+    draw(`Subcontractors: ${subcontractors.length} (docs: ${subDocs.length})`, 11, true)
     y -= 10
 
     // --- Insurance section ---
     draw("Insurance Policies", 14, true)
     y -= 4
-
     if (policies.length === 0) {
       draw("None", 11)
       y -= 8
@@ -135,7 +167,6 @@ export async function GET(req: Request) {
         const eff = p.effective_date ?? ""
         const exp = p.expiry_date ?? ""
         const cov = typeof p.coverage_amount === "number" ? String(p.coverage_amount) : ""
-
         draw(`${type} | ${provider}`, 12, true)
         draw(`Policy #: ${num || "-"}   Coverage: ${cov || "-"}`, 10)
         draw(`Effective: ${eff || "-"}   Expiry: ${exp || "-"}`, 10)
@@ -143,11 +174,43 @@ export async function GET(req: Request) {
       }
     }
 
+    // --- Subcontractors section ---
     y -= 6
+    draw("Subcontractors", 14, true)
+    y -= 4
+
+    if (subcontractors.length === 0) {
+      draw("None", 11)
+      y -= 8
+    } else {
+      for (const s of subcontractors) {
+        ensureSpace(180)
+        draw(`${s.name ?? ""}${s.trade ? ` (${s.trade})` : ""}`, 12, true)
+        draw(`Contact: ${s.contact_name ?? "-"}   Email: ${s.email ?? "-"}   Phone: ${s.phone ?? "-"}`, 9)
+        draw(`Active: ${s.is_active ? "Yes" : "No"}`, 9)
+
+        const docs = docsBySub[String(s.id)] ?? []
+        if (docs.length === 0) {
+          draw("Docs: none", 9)
+          y -= 6
+        } else {
+          draw(`Docs: ${docs.length}`, 9, true)
+          for (const d of docs) {
+            ensureSpace(140)
+            draw(`- ${d.doc_type ?? ""} | ${d.title ?? "-"} | Expires: ${d.expires_on ?? "-"}`, 9)
+          }
+          y -= 6
+        }
+
+        y -= 6
+      }
+    }
+
+    // --- Compliance Items ---
+    y -= 4
     draw("Compliance Items", 14, true)
     y -= 4
 
-    // Items list
     for (const it of items) {
       ensureSpace(180)
       const expires = it.expires_on ?? ""
@@ -181,117 +244,6 @@ export async function GET(req: Request) {
       }
     }
 
-    // --- Audit Summary (v0) ---
-    {
-      let p = pdfDoc.addPage([612, 792])
-      const x0 = margin
-      let yy = 792 - margin
-
-      const t = (text: string, size = 11, bold = false) => {
-        p.drawText(text, { x: x0, y: yy, size, font: bold ? fontBold : font })
-        yy -= size + 6
-      }
-
-      t("Audit Summary (v0)", 16, true)
-      t(`Org: ${orgRes.data.name} (${orgRes.data.id})`, 10)
-      t(`Generated: ${new Date().toISOString()}`, 10)
-      yy -= 10
-
-      t("Insurance (timestamps)", 12, true)
-      yy -= 4
-
-      if (policies.length === 0) {
-        t("None", 10)
-        yy -= 8
-      } else {
-        for (const pcy of policies) {
-          t(`${pcy.policy_type ?? ""} | ${pcy.provider ?? ""}`, 11, true)
-          t(`Policy ID: ${pcy.id}`, 8)
-          t(`Created: ${pcy.created_at ?? "n/a"}   Updated: ${pcy.updated_at ?? "n/a"}`, 8)
-          t(`Effective: ${pcy.effective_date ?? "n/a"}   Expiry: ${pcy.expiry_date ?? "n/a"}`, 8)
-          yy -= 8
-          if (yy < 120) {
-            p = pdfDoc.addPage([612, 792])
-            yy = 792 - margin
-          }
-        }
-      }
-
-      t("Items (timestamps)", 12, true)
-      yy -= 4
-
-      for (const it of items) {
-        const doc = latestDocsByItem[it.id]
-
-        t(`${it.type ?? ""} | ${it.title ?? ""}`, 11, true)
-        t(`Item ID: ${it.id}`, 8)
-        t(`Created: ${it.created_at ?? "n/a"}   Updated: ${it.updated_at ?? "n/a"}`, 8)
-        t(`Expires: ${it.expires_on ?? "n/a"}   Status: ${it.status ?? "n/a"}   Window: ${it.renewal_window_days ?? "n/a"}d`, 8)
-
-        if (doc) {
-          t(`Latest doc: ${doc.filename}   Doc created: ${doc.created_at ?? "n/a"}`, 8)
-          t(`Storage: ${doc.storage_bucket}/${doc.storage_path}`, 8)
-        } else {
-          t("Latest doc: none", 8)
-        }
-
-        yy -= 8
-        if (yy < 120) {
-          p = pdfDoc.addPage([612, 792])
-          yy = 792 - margin
-        }
-      }
-    }
-
-    // --- Attachments Index (v0) ---
-    {
-      let p = pdfDoc.addPage([612, 792])
-      const x0 = margin
-      let yy = 792 - margin
-
-      const t = (text: string, size = 11, bold = false) => {
-        p.drawText(text, { x: x0, y: yy, size, font: bold ? fontBold : font })
-        yy -= size + 6
-      }
-
-      t("Attachments Index (v0)", 16, true)
-      t(`Org: ${orgRes.data.name} (${orgRes.data.id})`, 10)
-      t(`Generated: ${new Date().toISOString()}`, 10)
-      yy -= 10
-
-      const withDocs = items.filter((it) => Boolean(latestDocsByItem[it.id]))
-      t(`Items with latest doc: ${withDocs.length}`, 11, true)
-      yy -= 6
-
-      for (const it of withDocs) {
-        const doc = latestDocsByItem[it.id]
-        const docUrl = latestDocUrlByItem[it.id]
-
-        t(`${it.type ?? ""} | ${it.title ?? ""}`, 12, true)
-        t(`Doc: ${doc.filename}   Type: ${doc.content_type ?? "unknown"}   Size: ${doc.size_bytes ?? "?"} bytes`, 9)
-        t(`Path: ${doc.storage_bucket}/${doc.storage_path}`, 8)
-
-        if (docUrl) {
-          await (async () => {
-            const dataUrl = await QRCode.toDataURL(docUrl, { margin: 0, width: 200 })
-            const base64 = dataUrl.split(",")[1]
-            const bytes = Buffer.from(base64, "base64")
-            const img = await pdfDoc.embedPng(bytes)
-            p.drawImage(img, { x: 500, y: yy - 60, width: 60, height: 60 })
-          })()
-          t("QR: scan to download (10m)", 8)
-        } else {
-          t("QR: none", 8)
-        }
-
-        yy -= 10
-        if (yy < 120) {
-          p = pdfDoc.addPage([612, 792])
-          yy = 792 - margin
-        }
-      }
-    }
-
     const pdfBytes = await pdfDoc.save()
 
     // Audit log (best effort)
@@ -305,13 +257,12 @@ export async function GET(req: Request) {
         entity_id: null,
         details: {
           total_items: items.length,
-          items_with_latest_doc: Object.keys(latestDocsByItem).length,
           total_insurance_policies: policies.length,
+          total_subcontractors: subcontractors.length,
+          total_subcontractor_documents: subDocs.length,
         },
       })
-    } catch (_) {
-      // ignore
-    }
+    } catch (_) {}
 
     return new Response(Buffer.from(pdfBytes), {
       status: 200,
