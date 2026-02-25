@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     // org
     const orgRes = await supabaseAdmin
       .from("organizations")
-      .select("id, name, created_at")
+      .select("id, name, created_at, profile_state, profile_trade")
       .eq("id", orgId)
       .maybeSingle()
 
@@ -39,6 +39,19 @@ export async function GET(req: Request) {
     const items = itemsRes.data ?? []
     const itemIds = items.map((i) => i.id)
 
+    // insurance policies
+    const insRes = await supabaseAdmin
+      .from("insurance_policies")
+      .select("id, org_id, provider, policy_number, policy_type, effective_date, expiry_date, coverage_amount, document_path, notes, created_at, updated_at")
+      .eq("org_id", orgId)
+      .order("expiry_date", { ascending: true })
+
+    if (insRes.error) {
+      return Response.json({ ok: false, error: insRes.error.message }, { status: 500 })
+    }
+
+    const insurance_policies = insRes.data ?? []
+
     // latest doc per item (best-effort)
     const latestDocsByItem: Record<string, any> = {}
     const latestDocUrlByItem: Record<string, string | null> = {}
@@ -59,7 +72,6 @@ export async function GET(req: Request) {
         if (!latestDocsByItem[d.item_id]) latestDocsByItem[d.item_id] = d
       }
     }
-
 
     // Create signed URLs for latest docs (default 600s)
     const expiresIn = 600
@@ -88,12 +100,14 @@ export async function GET(req: Request) {
       summary: {
         total_items: items.length,
         items_with_latest_doc: Object.keys(latestDocsByItem).length,
+        total_insurance_policies: insurance_policies.length,
       },
       items: items.map((i) => ({
         ...i,
         latest_doc: latestDocsByItem[i.id] ?? null,
         latest_doc_signed_url: latestDocUrlByItem[i.id] ?? null,
       })),
+      insurance_policies,
     }
 
     // Audit log (v0) - best effort (do not block export)
@@ -108,6 +122,7 @@ export async function GET(req: Request) {
         details: {
           total_items: pack.summary.total_items,
           items_with_latest_doc: pack.summary.items_with_latest_doc,
+          total_insurance_policies: pack.summary.total_insurance_policies,
         },
       })
     } catch (_) {
@@ -119,8 +134,3 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
-
-
-
-
-
