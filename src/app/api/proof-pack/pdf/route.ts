@@ -37,7 +37,7 @@ export async function GET(req: Request) {
     // insurance
     const insRes = await supabaseAdmin
       .from("insurance_policies")
-      .select("id, org_id, provider, policy_number, policy_type, effective_date, expiry_date, coverage_amount, created_at, updated_at")
+      .select("id, org_id, provider, policy_number, policy_type, effective_date, expiry_date, coverage_amount, created_at, updated_at,document_bucket,document_path,document_filename,document_content_type,document_size_bytes")
       .eq("org_id", orgId)
       .order("expiry_date", { ascending: true })
 
