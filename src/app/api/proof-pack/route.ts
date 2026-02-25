@@ -31,7 +31,6 @@ export async function GET(req: Request) {
 
     if (orgRes.error) return Response.json({ ok: false, error: orgRes.error.message }, { status: 500 })
     if (!orgRes.data) return Response.json({ ok: false, error: "Org not found" }, { status: 404 })
-
     // items
     const itemsRes = await supabaseAdmin
       .from("compliance_items")
@@ -47,7 +46,7 @@ export async function GET(req: Request) {
     // insurance policies
     const insRes = await supabaseAdmin
       .from("insurance_policies")
-      .select("id, org_id, provider, policy_number, policy_type, effective_date, expiry_date, coverage_amount, document_path, notes, created_at, updated_at")
+      .select("id, org_id, provider, policy_number, policy_type, effective_date, expiry_date, coverage_amount, document_path, notes, created_at, updated_at, document_bucket, document_filename, document_content_type, document_size_bytes")
       .eq("org_id", orgId)
       .order("expiry_date", { ascending: true })
 
@@ -62,9 +61,10 @@ export async function GET(req: Request) {
       .order("name", { ascending: true })
 
     if (subsRes.error) return Response.json({ ok: false, error: subsRes.error.message }, { status: 500 })
-    const subcontractors = subsRes.data ?? []
+    let subcontractors = subsRes.data ?? []
     const subIds = subcontractors.map((s) => s.id)
 
+    // normalized subcontractor docs array used by the pack builder
     // subcontractor docs
     let subcontractor_documents: any[] = []
     if (subIds.length > 0) {
@@ -72,12 +72,15 @@ export async function GET(req: Request) {
         .from("subcontractor_documents")
         .select("id, org_id, subcontractor_id, doc_type, title, expires_on, filename, content_type, size_bytes, storage_bucket, storage_path, created_at, updated_at")
         .eq("org_id", orgId)
-        .in("subcontractor_id", subIds)
         .order("created_at", { ascending: false })
 
       if (docsRes.error) return Response.json({ ok: false, error: docsRes.error.message }, { status: 500 })
       subcontractor_documents = docsRes.data ?? []
     }
+
+
+    // normalize docs array for pack builder
+    const subDocs = subcontractor_documents ?? []
 
     // latest doc per compliance item (best-effort)
     const latestDocsByItem: Record<string, any> = {}
@@ -119,18 +122,20 @@ export async function GET(req: Request) {
       latestDocUrlByItem[itemId] = data?.signedUrl ?? null
     }
 
-    const pack = {
+    
+
+const pack = {
       generated_at: new Date().toISOString(),
       org: orgRes.data,
       summary: {
         total_items: items.length,
         items_with_latest_doc: Object.keys(latestDocsByItem).length,
-        total_insurance_policies: policies.length,
+        total_insurance_policies: insurance_policies.length,
         total_subcontractors: subcontractors.length,
         total_subcontractor_documents: subDocs.length,
       },
       insurance_policies: await Promise.all(
-        (policies ?? []).map(async (p: any) => ({
+        (insurance_policies ?? []).map(async (p: any) => ({
           ...p,
           document_signed_url: await signedUrl(p.document_bucket ?? null, p.document_path ?? null, 600),
         }))
