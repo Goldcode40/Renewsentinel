@@ -386,13 +386,149 @@ Dev user: <span className="font-mono">{DEV_USER_ID}</span>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>{applySuccess}</div>
             {applySuccessOutside ? (
+              <button
+                className="rounded bg-black px-3 py-2 text-xs text-white"
+                type="button"
+                onClick={() => {
+                  setDays(365)
+                  loadItems(orgId, 365)
+                }}
+                title="Expand the window to see the new item"
+              >
+                Set window to 365 + Refresh
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}<section className="rounded-lg border p-4 space-y-3">
+<div className="flex flex-wrap items-end gap-3">
+<div className="flex flex-col gap-1">
+<label className="text-sm font-medium">Organization</label>
+<select
+className="h-10 rounded border px-3"
+value={orgId}
+onChange={(e) => setOrgId(e.target.value)}
+>
+{orgs.map((o) => (
+<option key={o.id} value={o.id}>
+{o.name} ({o.role})
+</option>
+))}
+</select>
+</div>
+<div className="flex flex-col gap-1">
+<label className="text-sm font-medium">Window (days)</label>
+<input
+className="h-10 w-28 rounded border px-3"
+type="number"
+min={1}
+max={3650}
+value={days}
+onChange={(e) => setDays(parseInt(e.target.value || "90", 10))}
+/>
+</div>
+<button
+className="h-10 rounded bg-black px-4 text-white disabled:opacity-50"
+onClick={() => loadItems(orgId, days)}
+disabled={!orgId || loadingItems}
+>
+{loadingItems ? "Loading..." : "Refresh"}          </button>
+<button
+className="h-10 rounded border px-4 disabled:opacity-50"
+onClick={scheduleReminders}
+disabled={!orgId || scheduling}
+title="Generate reminder events (deduped)"
+>
+{scheduling ? "Scheduling..." : "Schedule reminders"}          </button>
+<button
+className="h-10 rounded border px-4 disabled:opacity-50"
+onClick={() => {
+if (!orgId) return
+window.open(`/api/reminders?org_id=${orgId}&limit=50`, "_blank")
+}}
+disabled={!orgId}
+title="Open scheduled reminders (JSON)"
+>
+View reminders
+</button>
+          <button
+            className="h-10 rounded border px-4 text-sm"
+            onClick={() => {
+              if (!orgId) return
+              window.open(`/api/proof-pack/pdf?org_id=${orgId}`, "_blank")
+            }}
+            disabled={!orgId}
+            title="Open Proof Pack export (PDF)"
+          >
+            Proof Pack (PDF)
+          </button>
+          <button
+            className="h-10 rounded border px-4 text-sm"
+            onClick={() => { window.location.href = "/insurance" }}
+            disabled={!orgId}
+            title="Go to Insurance Tracking"
+          >
+            Insurance
+          </button>
+          <button
+            className="h-10 rounded border px-4 text-sm"
+            onClick={() => { window.location.href = "/subcontractors" }}
+            disabled={!orgId}
+            title="Go to Subcontractors"
+          >
+            Subcontractors
+          </button>
+          <button
+            className="h-10 rounded border px-4 text-sm"
+            onClick={() => {
+              if (!orgId) return
+              window.open(`/api/proof-pack?org_id=${orgId}`, "_blank")
+            }}
+            disabled={!orgId}
+            title="Open Proof Pack export (JSON)"
+          >
+            Proof Pack (JSON)
+          </button>
+          <button
+            className="h-10 rounded border px-4 text-sm"
+            onClick={() => { window.location.href = "/insurance" }}
+            disabled={!orgId}
+            title="Go to Insurance Tracking"
+          >
+            Insurance
+          </button>
+          <button
+            className="h-10 rounded border px-4 text-sm"
+            onClick={() => { window.location.href = "/subcontractors" }}
+            disabled={!orgId}
+            title="Go to Subcontractors"
+          >
+            Subcontractors
+          </button>
+          <button
+            className="h-10 rounded border px-4 text-sm"
+            onClick={() => { window.location.href = "/insurance" }}
+            disabled={!orgId}
+            title="Go to Insurance Tracking"
+          >
+            Insurance
+          </button>
+          <button
+            className="h-10 rounded border px-4 text-sm"
+            onClick={() => { window.location.href = "/subcontractors" }}
+            disabled={!orgId}
+            title="Go to Subcontractors"
+          >
+            Subcontractors
+          </button>
 <div className="text-sm text-gray-600">
 {selectedOrg ? (
 <span className="font-mono">{selectedOrg.id}</span>
-) : null}          {typeof lastScheduled === "number" ? (
-            <div className="text-xs text-gray-600">Scheduled: {lastScheduled}</div>
-          ) : null}
-        </div>
+) : null}
+</div>          {typeof lastScheduled === "number" ? (
+<div className="text-xs text-gray-600">Scheduled: {lastScheduled}</div>
+) : null}
+</div>
 </section>
 <section className="grid gap-6 md:grid-cols-2">
 <div className="rounded-lg border p-4 space-y-4">
@@ -471,7 +607,7 @@ disabled={!orgId || creating}
 <span className="text-sm text-gray-600">{items.length} item(s)</span>
 </div>
 {loadingItems ? (
-<div className="text-sm text-gray-600">Loading…</div>
+<div className="text-sm text-gray-600">LoadingΓÇª</div>
 ) : items.length === 0 ? (
 <div className="text-sm text-gray-600">No items within window.</div>
 ) : (
@@ -483,29 +619,12 @@ disabled={!orgId || creating}
 <div className="font-medium">{it.title}</div>
 <div className="text-sm text-gray-600">
 <span className="font-mono">{it.type}</span>
-{it.issuer ? <> · {it.issuer}</> : null}
-{it.identifier ? <> · {it.identifier}</> : null}
+{it.issuer ? <> ┬╖ {it.issuer}</> : null}
+{it.identifier ? <> ┬╖ {it.identifier}</> : null}
 </div>
 </div>
 <div className="flex flex-col items-end gap-2">
-<span className={`rounded border px-2 py
-          <button
-            className="h-10 rounded border px-4 text-sm"
-            onClick={() => { window.location.href = "/insurance" }}
-            disabled={!orgId}
-            title="Go to Insurance Tracking"
-          >
-            Insurance
-          </button>
-
-          <button
-            className="h-10 rounded border px-4 text-sm"
-            onClick={() => { window.location.href = "/subcontractors" }}
-            disabled={!orgId}
-            title="Go to Subcontractors"
-          >
-            Subcontractors
-          </button>-1 text-xs font-medium ${clsStatus(it.status)}`}>
+<span className={`rounded border px-2 py-1 text-xs font-medium ${clsStatus(it.status)}`}>
 {it.status.toUpperCase()}
 </span>
 <div className="text-sm">
@@ -518,7 +637,7 @@ if (confirm("Delete this item?")) deleteItem(it.id)
 }}
 title="Delete"
 >
-🗑️ Delete
+≡ƒùæ∩╕Å Delete
 </button>
 <button
 className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
@@ -529,7 +648,7 @@ updateItem(it.id, { title: nextTitle.trim() })
 }}
 title="Edit title"
 >
-✏️ Edit
+Γ£Å∩╕Å Edit
 </button>
 <form
 className="mt-2 flex flex-col gap-2"
@@ -622,7 +741,7 @@ Delete latest doc
 <div className="mt-2 text-sm text-gray-700">
 Expires: <span className="font-mono">{it.expires_on}</span>
 {typeof it.renewal_window_days === "number" ? (
-<> · Window: {it.renewal_window_days}d</>
+<> ┬╖ Window: {it.renewal_window_days}d</>
 ) : null}
 </div>
 </li>
@@ -726,7 +845,7 @@ disabled={reqLoading}
   >
     Add
   </button>
-</div>    <div className="text-xs text-gray-600">{r.state} • {r.trade} • {r.requirement_type}</div>  </div></li>
+</div>    <div className="text-xs text-gray-600">{r.state} ΓÇó {r.trade} ΓÇó {r.requirement_type}</div>  </div></li>
 ))}
 </ul>
 )}
@@ -748,7 +867,7 @@ disabled={reqLoading}
                 disabled={applySaving}
                 title="Close"
               >
-                ✕
+                Γ£ò
               </button>
             </div>
 
@@ -789,7 +908,6 @@ disabled={reqLoading}
 </main>
 )
 }
-
 
 
 
