@@ -18,12 +18,8 @@ export async function GET(req: Request) {
       .eq("id", orgId)
       .maybeSingle()
 
-    if (orgRes.error) {
-      return Response.json({ ok: false, error: orgRes.error.message }, { status: 500 })
-    }
-    if (!orgRes.data) {
-      return Response.json({ ok: false, error: "Org not found" }, { status: 404 })
-    }
+    if (orgRes.error) return Response.json({ ok: false, error: orgRes.error.message }, { status: 500 })
+    if (!orgRes.data) return Response.json({ ok: false, error: "Org not found" }, { status: 404 })
 
     // items
     const itemsRes = await supabaseAdmin
@@ -32,9 +28,7 @@ export async function GET(req: Request) {
       .eq("org_id", orgId)
       .order("expires_on", { ascending: true })
 
-    if (itemsRes.error) {
-      return Response.json({ ok: false, error: itemsRes.error.message }, { status: 500 })
-    }
+    if (itemsRes.error) return Response.json({ ok: false, error: itemsRes.error.message }, { status: 500 })
 
     const items = itemsRes.data ?? []
     const itemIds = items.map((i) => i.id)
@@ -46,13 +40,35 @@ export async function GET(req: Request) {
       .eq("org_id", orgId)
       .order("expiry_date", { ascending: true })
 
-    if (insRes.error) {
-      return Response.json({ ok: false, error: insRes.error.message }, { status: 500 })
-    }
-
+    if (insRes.error) return Response.json({ ok: false, error: insRes.error.message }, { status: 500 })
     const insurance_policies = insRes.data ?? []
 
-    // latest doc per item (best-effort)
+    // subcontractors
+    const subsRes = await supabaseAdmin
+      .from("subcontractors")
+      .select("id, org_id, name, contact_name, email, phone, trade, notes, is_active, created_at, updated_at")
+      .eq("org_id", orgId)
+      .order("name", { ascending: true })
+
+    if (subsRes.error) return Response.json({ ok: false, error: subsRes.error.message }, { status: 500 })
+    const subcontractors = subsRes.data ?? []
+    const subIds = subcontractors.map((s) => s.id)
+
+    // subcontractor docs
+    let subcontractor_documents: any[] = []
+    if (subIds.length > 0) {
+      const docsRes = await supabaseAdmin
+        .from("subcontractor_documents")
+        .select("id, org_id, subcontractor_id, doc_type, title, expires_on, filename, content_type, size_bytes, storage_bucket, storage_path, created_at, updated_at")
+        .eq("org_id", orgId)
+        .in("subcontractor_id", subIds)
+        .order("created_at", { ascending: false })
+
+      if (docsRes.error) return Response.json({ ok: false, error: docsRes.error.message }, { status: 500 })
+      subcontractor_documents = docsRes.data ?? []
+    }
+
+    // latest doc per compliance item (best-effort)
     const latestDocsByItem: Record<string, any> = {}
     const latestDocUrlByItem: Record<string, string | null> = {}
 
@@ -64,16 +80,14 @@ export async function GET(req: Request) {
         .in("item_id", itemIds)
         .order("created_at", { ascending: false })
 
-      if (docsRes.error) {
-        return Response.json({ ok: false, error: docsRes.error.message }, { status: 500 })
-      }
+      if (docsRes.error) return Response.json({ ok: false, error: docsRes.error.message }, { status: 500 })
 
       for (const d of docsRes.data ?? []) {
         if (!latestDocsByItem[d.item_id]) latestDocsByItem[d.item_id] = d
       }
     }
 
-    // Create signed URLs for latest docs (default 600s)
+    // signed URLs for compliance item docs
     const expiresIn = 600
     for (const itemId of Object.keys(latestDocsByItem)) {
       const doc = latestDocsByItem[itemId]
@@ -101,6 +115,8 @@ export async function GET(req: Request) {
         total_items: items.length,
         items_with_latest_doc: Object.keys(latestDocsByItem).length,
         total_insurance_policies: insurance_policies.length,
+        total_subcontractors: subcontractors.length,
+        total_subcontractor_documents: subcontractor_documents.length,
       },
       items: items.map((i) => ({
         ...i,
@@ -108,9 +124,11 @@ export async function GET(req: Request) {
         latest_doc_signed_url: latestDocUrlByItem[i.id] ?? null,
       })),
       insurance_policies,
+      subcontractors,
+      subcontractor_documents,
     }
 
-    // Audit log (v0) - best effort (do not block export)
+    // Audit log - best effort
     try {
       await supabaseAdmin.from("audit_log_events").insert({
         org_id: orgId,
@@ -119,15 +137,9 @@ export async function GET(req: Request) {
         action: "proofpack.exported.json",
         entity_type: "proof_pack",
         entity_id: null,
-        details: {
-          total_items: pack.summary.total_items,
-          items_with_latest_doc: pack.summary.items_with_latest_doc,
-          total_insurance_policies: pack.summary.total_insurance_policies,
-        },
+        details: pack.summary,
       })
-    } catch (_) {
-      // ignore audit failures
-    }
+    } catch (_) {}
 
     return Response.json({ ok: true, pack })
   } catch (e: any) {
