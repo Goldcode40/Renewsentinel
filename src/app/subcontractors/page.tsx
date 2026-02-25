@@ -23,6 +23,22 @@ type Subcontractor = {
   updated_at: string
 }
 
+type SubDoc = {
+  id: string
+  org_id: string
+  subcontractor_id: string
+  doc_type: string
+  title: string | null
+  expires_on: string | null
+  filename: string | null
+  content_type: string | null
+  size_bytes: number | null
+  storage_bucket: string | null
+  storage_path: string | null
+  created_at: string
+  updated_at: string
+}
+
 const DEV_USER_ID = "00000000-0000-0000-0000-000000000001"
 
 export default function SubcontractorsPage() {
@@ -35,7 +51,7 @@ export default function SubcontractorsPage() {
   const [err, setErr] = useState<string>("")
   const [success, setSuccess] = useState<string>("")
 
-  // modal
+  // subcontractor modal (add/edit)
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [mode, setMode] = useState<"create" | "edit">("create")
@@ -49,6 +65,19 @@ export default function SubcontractorsPage() {
   const [trade, setTrade] = useState("")
   const [notes, setNotes] = useState("")
   const [isActive, setIsActive] = useState(true)
+
+  // docs modal
+  const [docsOpen, setDocsOpen] = useState(false)
+  const [docsFor, setDocsFor] = useState<Subcontractor | null>(null)
+  const [docs, setDocs] = useState<SubDoc[]>([])
+  const [docsLoading, setDocsLoading] = useState(false)
+  const [docsErr, setDocsErr] = useState("")
+  const [docsSaving, setDocsSaving] = useState(false)
+
+  // docs form
+  const [docType, setDocType] = useState("coi")
+  const [docTitle, setDocTitle] = useState("")
+  const [docExpiresOn, setDocExpiresOn] = useState("")
 
   async function loadOrgs() {
     setErr("")
@@ -228,6 +257,73 @@ export default function SubcontractorsPage() {
     }
   }
 
+  async function openDocs(s: Subcontractor) {
+    if (!orgId) return
+    setDocsFor(s)
+    setDocsOpen(true)
+    setDocs([])
+    setDocsErr("")
+    setDocType("coi")
+    setDocTitle("")
+    setDocExpiresOn("")
+    await loadDocs(s.id)
+  }
+
+  async function loadDocs(subcontractorId: string) {
+    if (!orgId) return
+    setDocsLoading(true)
+    setDocsErr("")
+    try {
+      const res = await fetch(`/api/subcontractor-docs?org_id=${orgId}&subcontractor_id=${subcontractorId}`, { cache: "no-store" })
+      const json = await res.json()
+      if (!res.ok) {
+        setDocsErr(json?.error ?? "Failed to load docs")
+        setDocs([])
+        return
+      }
+      setDocs(Array.isArray(json?.rows) ? json.rows : [])
+    } catch (e: any) {
+      setDocsErr(e?.message ?? "Failed to load docs")
+      setDocs([])
+    } finally {
+      setDocsLoading(false)
+    }
+  }
+
+  async function addDoc() {
+    if (!orgId) return
+    if (!docsFor?.id) return
+    if (!docType.trim()) return setDocsErr("doc_type is required")
+
+    setDocsSaving(true)
+    setDocsErr("")
+    try {
+      const res = await fetch("/api/subcontractor-docs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          org_id: orgId,
+          subcontractor_id: docsFor.id,
+          doc_type: docType.trim(),
+          title: docTitle.trim() || null,
+          expires_on: docExpiresOn.trim() || null,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setDocsErr(json?.error ?? "Failed to add doc")
+        return
+      }
+      await loadDocs(docsFor.id)
+      setDocTitle("")
+      setDocExpiresOn("")
+    } catch (e: any) {
+      setDocsErr(e?.message ?? "Failed to add doc")
+    } finally {
+      setDocsSaving(false)
+    }
+  }
+
   useEffect(() => {
     loadOrgs()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -323,6 +419,9 @@ export default function SubcontractorsPage() {
                     <td className="p-2">{s.is_active ? "Yes" : "No"}</td>
                     <td className="p-2">
                       <div className="flex items-center gap-2">
+                        <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" onClick={() => openDocs(s)} title="Docs">
+                          📎 Docs
+                        </button>
                         <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" onClick={() => openEdit(s)} title="Edit">
                           ✏️ Edit
                         </button>
@@ -339,7 +438,7 @@ export default function SubcontractorsPage() {
         )}
       </section>
 
-      {/* Add/Edit Modal */}
+      {/* Add/Edit Subcontractor Modal */}
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-lg bg-white p-4 shadow-lg">
@@ -404,6 +503,96 @@ export default function SubcontractorsPage() {
               <button className="h-10 rounded bg-black px-4 text-sm text-white disabled:opacity-50" type="button" onClick={onSave} disabled={saving}>
                 {saving ? "Saving..." : saveLabel}
               </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Docs Modal */}
+      {docsOpen && docsFor ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-lg bg-white p-4 shadow-lg">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm text-gray-600">Documents</div>
+                <div className="text-lg font-semibold">{docsFor.name}</div>
+              </div>
+              <button
+                className="rounded border px-2 py-1 text-sm hover:bg-gray-50"
+                type="button"
+                onClick={() => setDocsOpen(false)}
+                disabled={docsSaving}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {docsErr ? (
+              <div className="mt-3 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">{docsErr}</div>
+            ) : null}
+
+            <div className="mt-3 flex flex-wrap items-end gap-3">
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-600">Doc type *</label>
+                <select className="h-10 rounded border px-3" value={docType} onChange={(e) => setDocType(e.target.value)}>
+                  <option value="coi">coi</option>
+                  <option value="w9">w9</option>
+                  <option value="license">license</option>
+                  <option value="cert">cert</option>
+                  <option value="other">other</option>
+                </select>
+              </div>
+
+              <div className="flex flex-1 flex-col">
+                <label className="text-xs text-gray-600">Title</label>
+                <input className="h-10 rounded border px-3" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} placeholder="COI 2026" />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-600">Expires on</label>
+                <input className="h-10 rounded border px-3" type="date" value={docExpiresOn} onChange={(e) => setDocExpiresOn(e.target.value)} />
+              </div>
+
+              <button className="h-10 rounded bg-black px-4 text-sm text-white disabled:opacity-50" onClick={addDoc} disabled={docsSaving}>
+                {docsSaving ? "Adding..." : "Add doc"}
+              </button>
+
+              <button className="h-10 rounded border px-4 text-sm" onClick={() => loadDocs(docsFor.id)} disabled={docsLoading}>
+                {docsLoading ? "Loading..." : "Refresh"}
+              </button>
+            </div>
+
+            <div className="mt-4 rounded border">
+              <div className="border-b bg-gray-50 px-3 py-2 text-sm font-medium">Docs</div>
+              {docsLoading ? (
+                <div className="p-3 text-sm text-gray-600">Loading…</div>
+              ) : docs.length === 0 ? (
+                <div className="p-3 text-sm text-gray-600">No docs yet.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left">
+                        <th className="p-2">Type</th>
+                        <th className="p-2">Title</th>
+                        <th className="p-2">Expires</th>
+                        <th className="p-2">File</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {docs.map((d) => (
+                        <tr key={d.id} className="border-b">
+                          <td className="p-2 font-mono">{d.doc_type}</td>
+                          <td className="p-2">{d.title ?? "-"}</td>
+                          <td className="p-2 font-mono">{d.expires_on ?? "-"}</td>
+                          <td className="p-2">{d.filename ?? "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </div>
