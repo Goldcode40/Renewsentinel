@@ -1,12 +1,13 @@
 ﻿param(
   [string]$BaseUrl = "http://localhost:3000",
-  [string]$OrgId = "fc59c51a-cf64-4c23-99eb-81527171a661"
+  [string]$OrgId = "fc59c51a-cf64-4c23-99eb-81527171a661",
+  [string]$UserId = "00000000-0000-0000-0000-000000000001"
 )
 
 Write-Host "== Concierge Upload Smoke Test =="
 
 # 1) Get request_id
-$uGet = "$BaseUrl/api/concierge?org_id=$OrgId"
+$uGet = "$BaseUrl/api/concierge?org_id=$OrgId&user_id=$UserId"
 Write-Host "GET $uGet"
 $resp = curl.exe -s $uGet | ConvertFrom-Json
 
@@ -27,6 +28,7 @@ $uPost = "$BaseUrl/api/concierge/upload"
 Write-Host "`nPOST $uPost (multipart upload)"
 $r2 = curl.exe -s -X POST `
   -F "org_id=$OrgId" `
+  -F "user_id=$UserId" `
   -F "request_id=$requestId" `
   -F "doc_type=license" `
   -F "file=@$tmp;type=text/plain" `

@@ -1,12 +1,13 @@
 ﻿param(
   [string]$BaseUrl = "http://localhost:3000",
-  [string]$OrgId = "fc59c51a-cf64-4c23-99eb-81527171a661"
+  [string]$OrgId = "fc59c51a-cf64-4c23-99eb-81527171a661",
+  [string]$UserId = "00000000-0000-0000-0000-000000000001"
 )
 
 Write-Host "== Concierge Smoke Test =="
 
 # 1) GET (should return request:null first time)
-$u1 = "$BaseUrl/api/concierge?org_id=$OrgId"
+$u1 = "$BaseUrl/api/concierge?org_id=$OrgId&user_id=$UserId"
 Write-Host "GET $u1"
 $r1 = curl.exe -s $u1
 $r1 | Out-String | Write-Host
@@ -14,9 +15,10 @@ $r1 | Out-String | Write-Host
 # 2) POST (create/submit) - Windows-safe JSON via temp file
 $u2 = "$BaseUrl/api/concierge"
 $payloadObj = @{
-  org_id = $OrgId
-  status = "submitted"
-  notes  = "smoke test submit"
+  org_id  = $OrgId
+  user_id = $UserId
+  status  = "submitted"
+  notes   = "smoke test submit"
 }
 $json = $payloadObj | ConvertTo-Json -Compress
 
