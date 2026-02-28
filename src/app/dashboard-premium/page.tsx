@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 import { useEffect, useMemo, useState } from "react"
 type Org = {
   id: string
@@ -641,7 +641,7 @@ disabled={!orgId || creating}
 <span className="text-sm text-gray-500 mt-1">{items.length} item(s)</span>
 </div>
 {loadingItems ? (
-<div className="text-sm text-gray-500 mt-1">LoadingΓÇª</div>
+<div className="text-sm text-gray-500 mt-1">Loading...</div>
 ) : items.length === 0 ? (
 <div className="text-sm text-gray-500 mt-1"><div className="flex flex-col items-center justify-center h-full py-10 text-center space-y-4">
   <div className="text-5xl font-bold text-green-600">
@@ -663,8 +663,8 @@ disabled={!orgId || creating}
 <div className="font-medium">{it.title}</div>
 <div className="text-sm text-gray-500 mt-1">
 <span className="font-mono">{it.type}</span>
-{it.issuer ? <> ┬╖ {it.issuer}</> : null}
-{it.identifier ? <> ┬╖ {it.identifier}</> : null}
+{it.issuer ? <>  -  {it.issuer}</> : null}
+{it.identifier ? <>  -  {it.identifier}</> : null}
 </div>
 </div>
 <div className="flex flex-col items-end gap-2">
@@ -681,7 +681,7 @@ if (confirm("Delete this item?")) deleteItem(it.id)
 }}
 title="Delete"
 >
-≡ƒùæ∩╕Å Delete
+Delete
 </button>
 <button
 className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
@@ -692,7 +692,7 @@ updateItem(it.id, { title: nextTitle.trim() })
 }}
 title="Edit title"
 >
-Γ£Å∩╕Å Edit
+Edit
 </button>
 <form
 className="mt-2 flex flex-col gap-2"
@@ -785,7 +785,7 @@ Delete latest doc
 <div className="mt-2 text-sm text-gray-700">
 Expires: <span className="font-mono">{it.expires_on}</span>
 {typeof it.renewal_window_days === "number" ? (
-<> ┬╖ Window: {it.renewal_window_days}d</>
+<>  -  Window: {it.renewal_window_days}d</>
 ) : null}
 </div>
 </li>
@@ -889,7 +889,7 @@ disabled={reqLoading}
   >
     Add
   </button>
-</div>    <div className="text-xs text-gray-600">{r.state} ΓÇó {r.trade} ΓÇó {r.requirement_type}</div>  </div></li>
+</div>    <div className="text-xs text-gray-600">{r.state}  ·  {r.trade}  ·  {r.requirement_type}</div>  </div></li>
 ))}
 </ul>
 )}
@@ -911,7 +911,7 @@ disabled={reqLoading}
                 disabled={applySaving}
                 title="Close"
               >
-                Γ£ò
+                
               </button>
             </div>
 
@@ -953,6 +953,9 @@ disabled={reqLoading}
   </div></div>
 )
 }
+
+
+
 
 
 
