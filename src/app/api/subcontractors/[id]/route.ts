@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 // PATCH  /api/subcontractors/:id   { org_id, ...fields }
@@ -16,8 +16,15 @@ function getSupabase() {
   return { supabase, error: null as string | null };
 }
 
-export async function PATCH(req: Request, ctx: { params: { id: string } }) {
-  const id = (ctx?.params?.id || "").trim();
+type Ctx = { params: Promise<{ id: string }> };
+
+async function getId(ctx: Ctx) {
+  const p = await ctx.params;
+  return (p?.id || "").trim();
+}
+
+export async function PATCH(req: NextRequest, ctx: Ctx) {
+  const id = await getId(ctx);
   if (!id) return NextResponse.json({ error: "Missing id param" }, { status: 400 });
 
   let body: any = null;
@@ -65,8 +72,8 @@ export async function PATCH(req: Request, ctx: { params: { id: string } }) {
   return NextResponse.json({ row: data });
 }
 
-export async function DELETE(req: Request, ctx: { params: { id: string } }) {
-  const id = (ctx?.params?.id || "").trim();
+export async function DELETE(req: NextRequest, ctx: Ctx) {
+  const id = await getId(ctx);
   if (!id) return NextResponse.json({ error: "Missing id param" }, { status: 400 });
 
   let body: any = null;

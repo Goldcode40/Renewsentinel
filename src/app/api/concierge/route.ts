@@ -16,7 +16,7 @@ async function requireOrgAdmin(supabaseAdmin: any, org_id: string, user_id: stri
 
   const role = data.role as MemberRole;
   const ok = role === "owner" || role === "admin";
-  return { ok: ok as const, role };
+  return { ok, role };
 }
 
 function pickUserAllowedStatus(input: any) {
