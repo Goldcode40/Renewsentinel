@@ -1,26 +1,276 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* =========================
+   RenewSentinel Premium Theme (Phase 9.1)
+   Tailwind v4 token mapping via @theme inline
+   ========================= */
+
+/* Light mode defaults (kept clean) */
+:root{
+  /* Surfaces */
+  --rs-bg: #f7f8fb;
+  --rs-surface: #ffffff;
+  --rs-surface-2: #f1f3f9;
+  --rs-border: rgba(15, 23, 42, 0.12);
+
+  /* Text */
+  --rs-text: #0b1220;
+  --rs-text-muted: rgba(11, 18, 32, 0.72);
+
+  /* Brand */
+  --rs-primary: #1d4ed8;        /* blue-700 */
+  --rs-primary-2: #2563eb;      /* blue-600 */
+  --rs-accent: #38bdf8;         /* sky-400 */
+
+  /* Status */
+  --rs-success: #16a34a;
+  --rs-warning: #f59e0b;
+  --rs-danger:  #ef4444;
+
+  /* Radius + shadows */
+  --rs-radius: 14px;
+  --rs-radius-sm: 10px;
+
+  --rs-shadow-sm: 0 1px 2px rgba(2, 6, 23, 0.06);
+  --rs-shadow:    0 10px 30px rgba(2, 6, 23, 0.10);
+  --rs-shadow-lg: 0 18px 55px rgba(2, 6, 23, 0.18);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+/* Dark mode (premium default vibe) */
+@media (prefers-color-scheme: dark){
+  :root{
+    --rs-bg: #070a12;            /* deep navy */
+    --rs-surface: #0b1020;       /* card */
+    --rs-surface-2: #0f1730;     /* elevated */
+    --rs-border: rgba(148, 163, 184, 0.16);
+
+    --rs-text: #e7eefc;
+    --rs-text-muted: rgba(231, 238, 252, 0.72);
+
+    --rs-primary: #3b82f6;       /* blue-500 */
+    --rs-primary-2: #60a5fa;     /* blue-400 */
+    --rs-accent: #38bdf8;        /* sky-400 */
+
+    --rs-success: #22c55e;
+    --rs-warning: #fbbf24;
+    --rs-danger:  #f87171;
+
+    --rs-shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+    --rs-shadow:    0 14px 40px rgba(0,0,0,0.45);
+    --rs-shadow-lg: 0 22px 70px rgba(0,0,0,0.55);
+  }
+}
+
+/* Map tokens into Tailwind v4 theme variables */
+@theme inline{
+  /* Tailwind's color tokens used by utilities */
+  --color-background: var(--rs-bg);
+  --color-foreground: var(--rs-text);
+
+  /* Custom semantic tokens we’ll use in components */
+  --color-rs-surface: var(--rs-surface);
+  --color-rs-surface-2: var(--rs-surface-2);
+  --color-rs-border: var(--rs-border);
+
+  --color-rs-text: var(--rs-text);
+  --color-rs-text-muted: var(--rs-text-muted);
+
+  --color-rs-primary: var(--rs-primary);
+  --color-rs-primary-2: var(--rs-primary-2);
+  --color-rs-accent: var(--rs-accent);
+
+  --color-rs-success: var(--rs-success);
+  --color-rs-warning: var(--rs-warning);
+  --color-rs-danger:  var(--rs-danger);
+
+  --radius-rs: var(--rs-radius);
+  --radius-rs-sm: var(--rs-radius-sm);
+
+  --shadow-rs-sm: var(--rs-shadow-sm);
+  --shadow-rs: var(--rs-shadow);
+  --shadow-rs-lg: var(--rs-shadow-lg);
+
+  /* Keep your fonts wired */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+html, body{
+  height: 100%;
+}
+
+body{
+  background: var(--rs-bg);
+  color: var(--rs-text);
+  font-family: var(--font-sans), system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optional: better default link color */
+a{
+  color: var(--rs-primary);
+}
+a:hover{
+  color: var(--rs-primary-2);
+}
+
+/* A tiny bit of global rhythm */
+*{
+  outline-color: color-mix(in oklab, var(--rs-primary) 50%, transparent);
+}
+
+/* ================================
+   RenewSentinel Premium Theme
+   Apply by wrapping a page with: <div className="rs-premium"> ... </div>
+   ================================ */
+
+@layer base {
+  .rs-premium {
+    min-height: 100vh;
+    background:
+      radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,0.14), transparent 60%),
+      radial-gradient(1000px 500px at 85% 10%, rgba(16,185,129,0.12), transparent 55%),
+      radial-gradient(900px 500px at 50% 100%, rgba(59,130,246,0.10), transparent 55%),
+      linear-gradient(to bottom, rgb(248,250,252), rgb(245,247,255));
+    color: rgb(15,23,42);
+  }
+
+  .rs-premium h1, .rs-premium h2, .rs-premium h3 {
+    letter-spacing: -0.02em;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* “Premium surface” defaults */
+@layer components {
+  .rs-premium .rs-shell {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 20px 80px;
+  }
+
+  /* Glassy cards */
+  .rs-premium .rs-card {
+    border-radius: 18px;
+    border: 1px solid rgba(15,23,42,0.10);
+    background: rgba(255,255,255,0.70);
+    backdrop-filter: blur(10px);
+    box-shadow:
+      0 1px 0 rgba(15,23,42,0.05),
+      0 10px 30px rgba(2,6,23,0.08);
+  }
+
+  /* Inputs */
+  .rs-premium input,
+  .rs-premium select,
+  .rs-premium textarea {
+    border-radius: 12px !important;
+    border: 1px solid rgba(15,23,42,0.18) !important;
+    background: rgba(255,255,255,0.85) !important;
+    box-shadow: 0 1px 0 rgba(15,23,42,0.03);
+    outline: none;
+  }
+  .rs-premium input:focus,
+  .rs-premium select:focus,
+  .rs-premium textarea:focus {
+    border-color: rgba(99,102,241,0.55) !important;
+    box-shadow: 0 0 0 4px rgba(99,102,241,0.18) !important;
+  }
+
+  /* Buttons: make everything look intentional */
+  .rs-premium button {
+    border-radius: 12px !important;
+    font-weight: 600;
+    transition: transform .08s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .rs-premium button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(2,6,23,0.10);
+  }
+  .rs-premium button:active {
+    transform: translateY(0px);
+    box-shadow: 0 6px 14px rgba(2,6,23,0.10);
+  }
+
+  /* Primary button heuristic: “black button” becomes premium gradient */
+  .rs-premium button[class*="bg-black"],
+  .rs-premium button[class*="bg-slate-900"],
+  .rs-premium button[class*="bg-gray-900"] {
+    background: linear-gradient(135deg, rgb(79,70,229), rgb(37,99,235)) !important;
+    border: 1px solid rgba(255,255,255,0.35) !important;
+    color: white !important;
+  }
+
+  /* Secondary buttons */
+  .rs-premium button[class*="border"] {
+    background: rgba(255,255,255,0.70) !important;
+    border: 1px solid rgba(15,23,42,0.16) !important;
+  }
+
+  /* Tiny labels */
+  .rs-premium label {
+    font-size: 12px;
+    color: rgba(15,23,42,0.75);
+  }
+
+  /* Section titles inside cards */
+  .rs-premium .rs-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(15,23,42,0.85);
+  }
+
+  /* Subtle separators */
+  .rs-premium .rs-divider {
+    height: 1px;
+    background: rgba(15,23,42,0.10);
+  }
 }
+
+
+.rs-premium .rs-status-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(59,130,246,0.2);
+  box-shadow: 0 20px 40px rgba(37,99,235,0.15);
+  transform: translateY(-2px);
+}
+
+.rs-premium .rs-status-number {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.rs-premium .rs-subtle-card {
+  opacity: 0.92;
+  background: #ffffff;
+}
+
+
+.rs-premium .rs-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%);
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+.rs-premium .rs-status-card {
+  background: linear-gradient(145deg, #ffffff 0%, #eef2ff 100%);
+  border: 1px solid rgba(37,99,235,0.15);
+  box-shadow: 0 12px 32px rgba(37,99,235,0.18);
+}
+
+.rs-premium h1 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.rs-premium button.bg-black {
+  background: linear-gradient(90deg, #4f46e5, #2563eb);
+  box-shadow: 0 6px 18px rgba(37,99,235,0.35);
+}
+
+.rs-premium button.bg-black:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(37,99,235,0.45);
+}
+
