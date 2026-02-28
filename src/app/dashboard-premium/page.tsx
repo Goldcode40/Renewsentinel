@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 import { useEffect, useMemo, useState } from "react"
 type Org = {
   id: string
@@ -23,6 +23,37 @@ status: "green" | "yellow" | "red"
 days_left: number
 }
 const DEV_USER_ID = "00000000-0000-0000-0000-000000000001"
+
+type ConciergeDoc = {
+  id: string
+  request_id: string
+  doc_type: string
+  original_filename: string
+  mime_type: string
+  size_bytes: number
+  created_at: string
+  path: string
+}
+
+type ConciergeRequest = {
+  id: string
+  org_id: string
+  status: "submitted" | "in_progress" | "completed"
+  profile_state: string | null
+  profile_trade: string | null
+  notes: string | null
+  assigned_to: string | null
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+type ConciergePayload = {
+  request: ConciergeRequest | null
+  documents: ConciergeDoc[]
+  viewer_role?: string
+  error?: string
+}
 function clsStatus(s: Item["status"]) {
 if (s === "red") return "bg-red-100 text-red-800 border-red-200"
 if (s === "yellow") return "bg-yellow-100 text-yellow-800 border-yellow-200"
@@ -196,6 +227,141 @@ const [renewalWindowDays, setRenewalWindowDays] = useState<number>(30)
 const [creating, setCreating] = useState(false)
 const selectedOrg = useMemo(() => orgs.find(o => o.id === orgId), [orgs, orgId])
 
+// Concierge (Phase 6.2)
+const [concierge, setConcierge] = useState<ConciergePayload>({ request: null, documents: [], viewer_role: "" })
+const [conciergeLoading, setConciergeLoading] = useState<boolean>(false)
+const [conciergeErr, setConciergeErr] = useState<string>("")
+const [conciergeNotes, setConciergeNotes] = useState<string>("")
+const [conciergeDocType, setConciergeDocType] = useState<string>("license")
+const [conciergeUploading, setConciergeUploading] = useState<boolean>(false)
+async function openConciergeDoc(docId: string) {
+  if (!orgId) return
+  setConciergeErr("")
+  try {
+    const qs = new URLSearchParams({ org_id: orgId, doc_id: docId, expires: "600" })
+    const res = await fetch(`/api/concierge/doc-url?${qs.toString()}`, { cache: "no-store" })
+    const json = await res.json()
+    if (!res.ok || !json?.ok || !json?.url) {
+      setConciergeErr(json?.error ?? "Failed to get download link")
+      return
+    }
+    window.open(json.url, "_blank")
+  } catch (e: any) {
+    setConciergeErr(e?.message ?? "Failed to get download link")
+  }
+}
+
+
+function badgeForStatus(status: string | undefined | null) {
+  if (status === "completed") return "bg-green-100 text-green-800 border-green-200"
+  if (status === "in_progress") return "bg-blue-100 text-blue-800 border-blue-200"
+  return "bg-yellow-100 text-yellow-800 border-yellow-200"
+}
+
+async function loadConcierge(oid?: string) {
+  const useOrg = oid ?? orgId
+  if (!useOrg) return
+  setConciergeLoading(true)
+  setConciergeErr("")
+  try {
+    const qs = new URLSearchParams({ org_id: useOrg, user_id: DEV_USER_ID })
+    const res = await fetch(`/api/concierge?${qs.toString()}`, { cache: "no-store" })
+    const json = await res.json()
+    if (!res.ok) {
+      setConciergeErr(json?.error ?? "Failed to load concierge")
+      setConcierge({ request: null, documents: [], viewer_role: "" })
+      return
+    }
+    setConcierge({
+      request: json?.request ?? null,
+      documents: Array.isArray(json?.documents) ? json.documents : [],
+      viewer_role: json?.viewer_role ?? ""
+    })
+  } catch (e: any) {
+    setConciergeErr(e?.message ?? "Failed to load concierge")
+    setConcierge({ request: null, documents: [], viewer_role: "" })
+  } finally {
+    setConciergeLoading(false)
+  }
+}
+
+async function submitConcierge() {
+  if (!orgId) return
+  setConciergeErr("")
+  try {
+    const res = await fetch("/api/concierge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        org_id: orgId,
+        user_id: DEV_USER_ID,
+        status: "submitted",
+        notes: conciergeNotes.trim() || "Please set up my compliance tracking."
+      }),
+    })
+    const json = await res.json()
+    if (!res.ok || !json?.request?.id) {
+      setConciergeErr(json?.error ?? "Submit failed")
+      return
+    }
+    await loadConcierge(orgId)
+  } catch (e: any) {
+    setConciergeErr(e?.message ?? "Submit failed")
+  }
+}
+
+async function uploadConciergeDoc(file: File) {
+  if (!orgId) return
+  const requestId = concierge?.request?.id
+  if (!requestId) {
+    setConciergeErr("Submit your concierge request first, then upload documents.")
+    return
+  }
+
+  
+
+async function deleteConciergeDoc(docId: string) {
+  if (!orgId) return
+  try {
+    setConciergeErr("")
+    const res = await fetch("/api/concierge/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete_doc", org_id: orgId, doc_id: docId }),
+    })
+    const json = await res.json()
+    if (!json?.ok) {
+      setConciergeErr(json?.error ?? "Delete failed")
+      return
+    }
+    await loadConcierge(orgId)
+  } catch (e: any) {
+    setConciergeErr(e?.message ?? "Delete failed")
+  }
+}setConciergeUploading(true)
+  setConciergeErr("")
+  try {
+    const fd = new FormData()
+    fd.append("org_id", orgId)
+    fd.append("request_id", requestId)
+    fd.append("doc_type", conciergeDocType)
+    fd.append("file", file)
+
+    const res = await fetch("/api/concierge/upload", { method: "POST", body: fd })
+    const json = await res.json()
+    if (!res.ok || !json?.ok) {
+      setConciergeErr(json?.error ?? "Upload failed")
+      return
+    }
+
+    await loadConcierge(orgId)
+  } catch (e: any) {
+    setConciergeErr(e?.message ?? "Upload failed")
+  } finally {
+    setConciergeUploading(false)
+  }
+}
+
 
   async function saveOrgProfile(nextState?: string, nextTrade?: string) {
     if (!orgId) return
@@ -348,17 +514,19 @@ loadOrgs()
 // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [])
 useEffect(() => {
-    if (orgId) loadItems(orgId, days)
-    setApplySuccess("")
-    setApplySuccessOutside(false)
+  if (!orgId) return
+  loadItems(orgId, days)
+  loadConcierge(orgId)
 
-    // Apply org profile defaults to wizard
-    const org = orgs.find(o => o.id === orgId)
-    if (org?.profile_state) setReqState(String(org.profile_state).toUpperCase())
-    if (org?.profile_trade) setReqTrade(String(org.profile_trade).toLowerCase())
+  setApplySuccess("")
+  setApplySuccessOutside(false)
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId])
+  // Apply org profile defaults to wizard
+  const org = orgs.find(o => o.id === orgId)
+  if (org?.profile_state) setReqState(String(org.profile_state).toUpperCase())
+  if (org?.profile_trade) setReqTrade(String(org.profile_trade).toLowerCase())
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [orgId, orgs])
 
 
   // Auto-load requirements (wizard feel)
@@ -397,7 +565,155 @@ return (
         </div>
       </div>
 
-  <div className="flex items-center gap-3">
+{/* Concierge (Phase 6.2) */}
+<section className="rs-card p-6 space-y-4 border border-gray-200 rounded-xl">
+  <div className="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h2 className="text-xl font-semibold">We set it up for you</h2>
+      <p className="text-sm text-gray-600 mt-1">
+        Submit your request + upload any docs. We’ll configure your requirements and tracking.
+      </p>
+    </div>
+
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-gray-500">Org:</span>
+<span className="text-xs font-mono">{orgId || "(none)"}</span>
+<span className="text-xs text-gray-500">Role:</span>
+<span className="text-xs font-medium">{concierge.viewer_role || "unknown"}</span>
+      {concierge.request?.status ? (
+        <span className={`rounded border px-2 py-1 text-xs font-medium ${badgeForStatus(concierge.request.status)}`}>
+          {concierge.request.status.replace("_", " ").toUpperCase()}
+        </span>
+      ) : (
+        <span className="rounded border px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 border-gray-200">
+          NOT SUBMITTED
+        </span>
+      )}
+    </div>
+  </div>
+
+  {conciergeErr ? (
+    <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+      {conciergeErr}
+    </div>
+  ) : null}
+
+  {conciergeLoading ? (
+    <div className="text-sm text-gray-500">Loading concierge...</div>
+  ) : null}
+
+  {/* Permission gate */}
+  {concierge.viewer_role && concierge.viewer_role !== "owner" && concierge.viewer_role !== "admin" ? (
+    <div className="rounded border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-900">
+      Only an owner/admin can submit or view concierge setup details for this organization.
+    </div>
+  ) : (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Intake / Submit */}
+      <div className="space-y-3">
+        <div className="text-sm font-semibold">1) Submit setup request</div>
+        <div className="text-sm text-gray-600">
+          Tell us anything special. We’ll use your org profile defaults:
+          <span className="font-mono"> {reqState}</span> / <span className="font-mono">{reqTrade}</span>
+        </div>
+
+        <textarea
+          className="w-full min-h-[110px] rounded border p-3 text-sm"
+          placeholder="Notes (optional): licenses, towns, special permits, staff, etc."
+          value={conciergeNotes}
+          onChange={(e) => setConciergeNotes(e.target.value)}
+        />
+
+        <button
+          className="h-10 rounded bg-black px-4 text-white disabled:opacity-50"
+          onClick={submitConcierge}
+          disabled={!orgId || conciergeUploading}
+          title="Submit concierge request"
+        >
+          {concierge.request?.id ? "Update / Re-submit" : "Submit request"}
+        </button>
+
+        {concierge.request?.id ? (
+          <div className="text-xs text-gray-500">
+            Request ID: <span className="font-mono">{concierge.request.id}</span>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Upload + Docs list */}
+      <div className="space-y-3">
+        <div className="text-sm font-semibold">2) Upload documents</div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-600">Doc type</label>
+            <select
+              className="h-10 rounded border px-3 text-sm"
+              value={conciergeDocType}
+              onChange={(e) => setConciergeDocType(e.target.value)}
+            >
+              <option value="license">License</option>
+              <option value="insurance">Insurance</option>
+              <option value="permit">Permit</option>
+              <option value="training">Training</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <input
+            className="text-sm"
+            type="file"
+            accept=".pdf,.png,.jpg,.jpeg,.txt"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) uploadConciergeDoc(f)
+              // reset to allow re-upload same file
+              ;(e.target as any).value = ""
+            }}
+            disabled={!concierge.request?.id || conciergeUploading}
+          />
+
+          <div className="text-xs text-gray-500">Allowed: pdf/png/jpg/txt</div>
+        </div>
+
+        <div className="mt-3">
+  {concierge.documents.length === 0 ? (
+    <div className="text-sm text-gray-500">No concierge documents uploaded yet.</div>
+  ) : (
+    <ul className="space-y-2">
+      {concierge.documents.map((d) => (
+        <li key={d.id} className="rounded border p-3 flex items-center justify-between">
+          <div className="min-w-0">
+            <div className="text-sm font-medium truncate">{d.original_filename}</div>
+            <div className="text-xs text-gray-500 mt-1">
+              {d.doc_type} · {(d.size_bytes ?? 0)} bytes · {new Date(d.created_at).toLocaleString()}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="rounded border px-3 py-1 text-xs hover:bg-gray-50"
+            onClick={() => openConciergeDoc(d.id)}
+          >
+            Download
+          </button>
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
+        <button
+  type="button"
+  className="mt-3 rounded border px-3 py-1 text-xs hover:bg-gray-50"
+  onClick={() => loadConcierge(orgId)}
+>
+  Refresh concierge
+</button>
+      </div>
+    </div>
+  )}
+</section>
+
+<div className="flex items-center gap-3">
     <div className="px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-semibold">
       All Good — No upcoming expirations
     </div>
