@@ -55,3 +55,15 @@ _remote_schema2.sql
 _pp_body.txt
 _pp_headers.txt
 src/app/api/proof-pack/route.ts.bak_*
+# --- Local secrets / OAuth ---
+credentials.json
+token.pickle
+scripts/token.pickle
+
+# --- Local generated exports (emails) ---
+scripts/email_expiries.csv
+scripts/email_expiries_clean.csv
+scripts/email_expiries_pg.tsv
+
+# --- Temp / one-off SQL helpers ---
+scripts/_psql_copy_email_expiries.sql
