@@ -10,6 +10,13 @@ function mustEnv(name: string) {
   return v
 }
 
+// Helps when Supabase returns duplicate key errors in different formats
+function isDuplicateError(err: any) {
+  const msg = String(err?.message ?? err ?? "").toLowerCase()
+  const code = String(err?.code ?? "").toLowerCase()
+  return msg.includes("duplicate") || msg.includes("already exists") || code === "23505"
+}
+
 export async function POST(req: Request) {
   try {
     const secretKey = mustEnv("STRIPE_SECRET_KEY")
@@ -28,7 +35,11 @@ export async function POST(req: Request) {
     try {
       event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret)
     } catch (err: any) {
-      return NextResponse.json({ ok: false, error: `Webhook signature verification failed: ${err?.message ?? err}` }, { status: 400 })
+      console.error("[billing/webhook] signature verification failed", err)
+      return NextResponse.json(
+        { ok: false, error: `Webhook signature verification failed: ${err?.message ?? String(err)}` },
+        { status: 400 }
+      )
     }
 
     const supa = getSupabaseAdmin()
@@ -40,10 +51,8 @@ export async function POST(req: Request) {
       payload: event as any,
     })
 
-    // If duplicate primary key, ignore (already processed)
-    // supabase-js error format varies; easiest is to proceed only if not a hard error
-    if (ins.error && !String(ins.error.message || "").toLowerCase().includes("duplicate")) {
-      // If table missing etc., fail loudly
+    if (ins.error && !isDuplicateError(ins.error)) {
+      console.error("[billing/webhook] stripe_events insert failed", ins.error)
       return NextResponse.json({ ok: false, error: `stripe_events insert failed: ${ins.error.message}` }, { status: 500 })
     }
 
@@ -63,12 +72,12 @@ export async function POST(req: Request) {
             plan,
             stripe_customer_id: customerId ?? null,
             stripe_subscription_id: subscriptionId ?? null,
-            stripe_price_id: null,
             billing_status: "active",
           })
           .eq("id", org_id)
 
         if (upd.error) {
+          console.error("[billing/webhook] organizations update failed (checkout.session.completed)", upd.error)
           return NextResponse.json({ ok: false, error: `organizations update failed: ${upd.error.message}` }, { status: 500 })
         }
       }
@@ -78,14 +87,9 @@ export async function POST(req: Request) {
       const sub = event.data.object as Stripe.Subscription
       const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id
       const subscriptionId = sub.id
-
-      // Extract price id if available
-      const priceId =
-        sub.items?.data?.[0]?.price?.id ?? null
+      const priceId = sub.items?.data?.[0]?.price?.id ?? null
 
       const status = sub.status
-
-      // Map Stripe status to our billing_status
       const billing_status =
         status === "active" || status === "trialing" ? "active" :
         status === "canceled" ? "canceled" :
@@ -93,14 +97,12 @@ export async function POST(req: Request) {
         status === "unpaid" ? "unpaid" :
         status
 
-      // If subscription deleted/canceled, we downgrade to free (simple v1 policy)
       const maybePlan =
         event.type === "customer.subscription.deleted" || status === "canceled" ? "free" : null
 
       const periodEnd = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null
       const trialEnd = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null
 
-      // Update by subscription id if present; otherwise by customer id
       let q = supa.from("organizations").update({
         stripe_customer_id: customerId ?? null,
         stripe_subscription_id: subscriptionId ?? null,
@@ -116,14 +118,15 @@ export async function POST(req: Request) {
       else q = q.eq("id", "__no_match__")
 
       const upd = await q
-
       if (upd.error) {
+        console.error("[billing/webhook] organizations update failed (subscription event)", upd.error)
         return NextResponse.json({ ok: false, error: `organizations update failed: ${upd.error.message}` }, { status: 500 })
       }
     }
 
-    return NextResponse.json({ ok: true, received: true })
+    return NextResponse.json({ ok: true, received: true, type: event.type, id: event.id })
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? "Unknown error" }, { status: 500 })
+    console.error("[billing/webhook] fatal error", e)
+    return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 500 })
   }
 }
