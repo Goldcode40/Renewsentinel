@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { google } from "googleapis";
 
 export async function GET(req: Request) {
@@ -23,14 +23,13 @@ export async function GET(req: Request) {
     const scopes = [
       "https://www.googleapis.com/auth/calendar.events",
       "https://www.googleapis.com/auth/calendar.readonly",
-      "https://www.googleapis.com/auth/gmail.readonly",
     ];
 
     const authUrl = oauth2.generateAuthUrl({
       access_type: "offline",
       prompt: "consent",
       scope: scopes,
-      state: orgId, // weâ€™ll use this to attach tokens to the right org later
+      state: orgId, // we’ll use this to attach tokens to the right org later
     });
 
     return NextResponse.json({ ok: true, url: authUrl });
@@ -38,4 +37,3 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 });
   }
 }
-
