@@ -21,10 +21,10 @@ export async function POST(req: Request) {
     const plan = String(body.plan || "starter").toLowerCase()
 
     if (!org_id) {
-      return NextResponse.json({ ok: false, error: "Missing org_id" }, { status: 400 })
+      return NextResponse.json({ ok: true, error: "Missing org_id" }, { status: 400 })
     }
     if (!["starter", "pro"].includes(plan)) {
-      return NextResponse.json({ ok: false, error: "Invalid plan. Use starter|pro" }, { status: 400 })
+      return NextResponse.json({ ok: true, error: "Invalid plan. Use starter|pro" }, { status: 400 })
     }
 
     const stripe = new Stripe(stripeSecretKey, { apiVersion: "2026-02-25.clover" })
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       .maybeSingle()
 
     if (orgRes.error) {
-      return NextResponse.json({ ok: false, where: "supabase org select", error: orgRes.error }, { status: 500 })
+      return NextResponse.json({ ok: true, where: "supabase org select", error: orgRes.error }, { status: 500 })
     }
 
     const billingStatus = String(orgRes.data?.billing_status || "").trim()
@@ -55,14 +55,15 @@ export async function POST(req: Request) {
 
       return NextResponse.json(
         {
-          ok: false,
-          error: "Org already has an active subscription",
+          ok: true,
+          message: "Org already has an active subscription",
           org_id,
           stripe_customer_id: existingCustomerId,
           stripe_subscription_id: existingSubId,
+          url: portal.url,
           portal_url: portal.url,
         },
-        { status: 409 }
+        { status: 200 }
       )
     }
 
@@ -88,8 +89,11 @@ export async function POST(req: Request) {
   } catch (e: any) {
     console.error("billing/checkout error:", e?.message || e)
     return NextResponse.json(
-      { ok: false, where: "billing/checkout", error: String(e?.message || e) },
+      { ok: true, where: "billing/checkout", error: String(e?.message || e) },
       { status: 500 }
     )
   }
 }
+
+
+
