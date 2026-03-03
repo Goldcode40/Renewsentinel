@@ -227,6 +227,11 @@ const [renewalWindowDays, setRenewalWindowDays] = useState<number>(30)
 const [creating, setCreating] = useState(false)
 const selectedOrg = useMemo(() => orgs.find(o => o.id === orgId), [orgs, orgId])
 
+useEffect(() => {
+  console.log("RS selectedOrg", selectedOrg)
+}, [selectedOrg])
+
+
 async function goBilling(mode: "checkout" | "portal") {
   try {
     setErr("")
@@ -822,6 +827,14 @@ title="Open scheduled reminders (JSON)"
 View reminders
 </button>
           <button
+            className="h-10 rounded border px-4 disabled:opacity-50"
+            onClick={() => goBilling("portal")}
+            disabled={!orgId}
+            title="Open Stripe customer portal"
+          >
+            Manage billing
+          </button>
+          <button
             className="h-10 rounded border px-4 text-sm"
             onClick={() => {
               if (!orgId) return
@@ -1289,6 +1302,10 @@ disabled={reqLoading}
   </div></div>
 )
 }
+
+
+
+
 
 
 
