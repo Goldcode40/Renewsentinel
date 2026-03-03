@@ -1,5 +1,7 @@
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
+﻿import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
 
+
+import { requireActiveOrTrial } from "@/lib/billingGate"
 export async function GET(req: Request) {
   try {
     const supabaseAdmin = getSupabaseAdmin()
@@ -11,7 +13,15 @@ export async function GET(req: Request) {
 
     if (!orgId) return Response.json({ ok: false, error: "Missing org_id" }, { status: 400 })
 
-    const { data, error } = await supabaseAdmin
+// HARD GATE: Audit Log is premium-only (active subscription OR active trial)
+const gate = await requireActiveOrTrial(supabaseAdmin as any, orgId)
+if (!gate.ok) {
+  return Response.json(
+    { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+    { status: 403 }
+  )
+}
+const { data, error } = await supabaseAdmin
       .from("audit_log_events")
       .select("id, org_id, actor_user_id, actor_role, action, entity_type, entity_id, details, created_at")
       .eq("org_id", orgId)
@@ -25,3 +35,5 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
+

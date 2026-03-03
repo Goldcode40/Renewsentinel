@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
+﻿import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
 import { PDFDocument, StandardFonts } from "pdf-lib"
 import QRCode from "qrcode"
 
@@ -15,14 +15,22 @@ export async function GET(req: Request) {
     // org
     const orgRes = await supabaseAdmin
       .from("organizations")
-      .select("id, name, created_at")
+      .select("id, name, created_at, plan, billing_status")
       .eq("id", orgId)
       .maybeSingle()
 
     if (orgRes.error) return Response.json({ ok: false, error: orgRes.error.message }, { status: 500 })
     if (!orgRes.data) return Response.json({ ok: false, error: "Org not found" }, { status: 404 })
 
-    // items
+// HARD GATE: Proof Pack is premium-only
+const billingStatus = String((orgRes.data as any)?.billing_status ?? "").trim().toLowerCase()
+if (billingStatus !== "active") {
+  return Response.json(
+    { ok: false, error: "Billing inactive. Upgrade required." },
+    { status: 403 }
+  )
+}
+// items
     const itemsRes = await supabaseAdmin
       .from("compliance_items")
       .select("id, org_id, type, title, issuer, identifier, expires_on, renewal_window_days, status, created_at, updated_at")
