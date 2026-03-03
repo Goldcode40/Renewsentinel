@@ -7,6 +7,9 @@ type Org = {
   role: string
   profile_state?: string | null
   profile_trade?: string | null
+  plan?: string | null
+  billing_status?: string | null
+  current_period_end?: string | null
 }
 type Item = {
 id: string
@@ -227,6 +230,7 @@ const [renewalWindowDays, setRenewalWindowDays] = useState<number>(30)
 const [creating, setCreating] = useState(false)
 const selectedOrg = useMemo(() => orgs.find(o => o.id === orgId), [orgs, orgId])
 
+const isActive = (String(selectedOrg?.billing_status ?? "").trim().toLowerCase() === "active")
 async function goBilling(mode: "checkout" | "portal") {
   try {
     setErr("")
@@ -677,9 +681,7 @@ return (
               <option value="training">Training</option>
               <option value="other">Other</option>
             </select>
-          </div>
-
-          <input
+          </div><input
             className="text-sm"
             type="file"
             accept=".pdf,.png,.jpg,.jpeg,.txt"
@@ -786,7 +788,18 @@ onChange={(e) => setOrgId(e.target.value)}
 ))}
 </select>
 </div>
-<div className="flex flex-col gap-1">
+              <div className="text-xs text-gray-500">
+                Plan: <span className="font-medium">{(orgs.find(o => o.id === orgId)?.plan ?? "—")}</span>
+                {" · "}
+                Billing: <span className="font-medium">{(orgs.find(o => o.id === orgId)?.billing_status ?? "—")}</span>
+                {" · "}
+                Renews: <span className="font-medium">{(orgs.find(o => o.id === orgId)?.current_period_end ?? "—")}</span>
+              </div>
+              {!isActive ? (
+                <div className="mt-1 text-xs text-red-600 font-medium">
+                  Billing is not active. Start your trial or subscribe to unlock reminders, exports, and tracking.
+                </div>
+              ) : null}<div className="flex flex-col gap-1">
 <label className="text-sm font-medium">Window (days)</label>
 <input
 className="h-10 w-28 rounded border px-3"
@@ -806,8 +819,8 @@ disabled={!orgId || loadingItems}
 <button
 className="h-10 rounded border px-4 disabled:opacity-50"
 onClick={scheduleReminders}
-disabled={!orgId || scheduling}
-title="Generate reminder events (deduped)"
+disabled={!orgId || scheduling || !isActive}
+title={!isActive ? "Subscribe to enable reminders" : "Generate reminder events (deduped)"}
 >
 {scheduling ? "Scheduling..." : "Schedule reminders"}          </button>
 <button
@@ -816,8 +829,8 @@ onClick={() => {
 if (!orgId) return
 window.open(`/api/reminders?org_id=${orgId}&limit=50`, "_blank")
 }}
-disabled={!orgId}
-title="Open scheduled reminders (JSON)"
+disabled={!orgId || !isActive}
+title={!isActive ? "Subscribe to view reminders" : "Open scheduled reminders (JSON)"}
 >
 View reminders
 </button>
@@ -835,24 +848,24 @@ View reminders
               if (!orgId) return
               window.open(`/api/proof-pack/pdf?org_id=${orgId}`, "_blank")
             }}
-            disabled={!orgId}
-            title="Open Proof Pack export (PDF)"
+            disabled={!orgId || !isActive}
+            title={!isActive ? "Subscribe to export Proof Pack" : "Open Proof Pack export (PDF)"}
           >
             Proof Pack (PDF)
           </button>
           <button
             className="h-10 rounded border px-4 text-sm"
             onClick={() => { window.location.href = "/insurance" }}
-            disabled={!orgId}
-            title="Go to Insurance Tracking"
+            disabled={!orgId || !isActive}
+            title={!isActive ? "Subscribe to unlock Insurance" : "Go to Insurance Tracking"}
           >
             Insurance
           </button>
           <button
             className="h-10 rounded border px-4 text-sm"
             onClick={() => { window.location.href = "/subcontractors" }}
-            disabled={!orgId}
-            title="Go to Subcontractors"
+            disabled={!orgId || !isActive}
+            title={!isActive ? "Subscribe to unlock Subcontractors" : "Go to Subcontractors"}
           >
             Subcontractors
           </button>
@@ -863,39 +876,39 @@ View reminders
               window.open(`/api/proof-pack?org_id=${orgId}`, "_blank")
             }}
             disabled={!orgId}
-            title="Open Proof Pack export (JSON)"
+            title={!isActive ? "Subscribe to export Proof Pack" : "Open Proof Pack export (JSON)"}
           >
             Proof Pack (JSON)
           </button>
           <button
             className="h-10 rounded border px-4 text-sm"
             onClick={() => { window.location.href = "/insurance" }}
-            disabled={!orgId}
-            title="Go to Insurance Tracking"
+            disabled={!orgId || !isActive}
+            title={!isActive ? "Subscribe to unlock Insurance" : "Go to Insurance Tracking"}
           >
             Insurance
           </button>
           <button
             className="h-10 rounded border px-4 text-sm"
             onClick={() => { window.location.href = "/subcontractors" }}
-            disabled={!orgId}
-            title="Go to Subcontractors"
+            disabled={!orgId || !isActive}
+            title={!isActive ? "Subscribe to unlock Subcontractors" : "Go to Subcontractors"}
           >
             Subcontractors
           </button>
           <button
             className="h-10 rounded border px-4 text-sm"
             onClick={() => { window.location.href = "/insurance" }}
-            disabled={!orgId}
-            title="Go to Insurance Tracking"
+            disabled={!orgId || !isActive}
+            title={!isActive ? "Subscribe to unlock Insurance" : "Go to Insurance Tracking"}
           >
             Insurance
           </button>
           <button
             className="h-10 rounded border px-4 text-sm"
             onClick={() => { window.location.href = "/subcontractors" }}
-            disabled={!orgId}
-            title="Go to Subcontractors"
+            disabled={!orgId || !isActive}
+            title={!isActive ? "Subscribe to unlock Subcontractors" : "Go to Subcontractors"}
           >
             Subcontractors
           </button>
@@ -1297,6 +1310,12 @@ disabled={reqLoading}
   </div></div>
 )
 }
+
+
+
+
+
+
 
 
 
