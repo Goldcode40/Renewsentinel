@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 import { useEffect, useMemo, useState } from "react"
 type Org = {
   id: string
@@ -227,7 +227,27 @@ const [renewalWindowDays, setRenewalWindowDays] = useState<number>(30)
 const [creating, setCreating] = useState(false)
 const selectedOrg = useMemo(() => orgs.find(o => o.id === orgId), [orgs, orgId])
 
-// Concierge (Phase 6.2)
+async function goBilling(mode: "checkout" | "portal") {
+  try {
+    setErr("")
+    if (!orgId) return
+    const endpoint = mode === "portal" ? "/api/billing/portal" : "/api/billing/checkout"
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ org_id: orgId }),
+    })
+    const json = await res.json().catch(() => ({} as any))
+    const url = json?.url ?? json?.portal_url
+    if (!res.ok || !url) {
+      setErr(json?.error ?? ("Billing request failed (" + res.status + ")"))
+      return
+    }
+    window.location.href = url
+  } catch (e: any) {
+    setErr(e?.message ?? "Billing request failed")
+  }
+}// Concierge (Phase 6.2)
 const [concierge, setConcierge] = useState<ConciergePayload>({ request: null, documents: [], viewer_role: "" })
 const [conciergeLoading, setConciergeLoading] = useState<boolean>(false)
 const [conciergeErr, setConciergeErr] = useState<string>("")
@@ -571,7 +591,7 @@ return (
     <div>
       <h2 className="text-xl font-semibold">We set it up for you</h2>
       <p className="text-sm text-gray-600 mt-1">
-        Submit your request + upload any docs. We’ll configure your requirements and tracking.
+        Submit your request + upload any docs. Weâ€™ll configure your requirements and tracking.
       </p>
     </div>
 
@@ -613,7 +633,7 @@ return (
       <div className="space-y-3">
         <div className="text-sm font-semibold">1) Submit setup request</div>
         <div className="text-sm text-gray-600">
-          Tell us anything special. We’ll use your org profile defaults:
+          Tell us anything special. Weâ€™ll use your org profile defaults:
           <span className="font-mono"> {reqState}</span> / <span className="font-mono">{reqTrade}</span>
         </div>
 
@@ -685,7 +705,7 @@ return (
           <div className="min-w-0">
             <div className="text-sm font-medium truncate">{d.original_filename}</div>
             <div className="text-xs text-gray-500 mt-1">
-              {d.doc_type} · {(d.size_bytes ?? 0)} bytes · {new Date(d.created_at).toLocaleString()}
+              {d.doc_type} Â· {(d.size_bytes ?? 0)} bytes Â· {new Date(d.created_at).toLocaleString()}
             </div>
           </div>
 
@@ -715,7 +735,7 @@ return (
 
 <div className="flex items-center gap-3">
     <div className="px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-semibold">
-      All Good — No upcoming expirations
+      All Good â€” No upcoming expirations
     </div>
     <div className="text-sm text-gray-500">
       Monitoring Next 90 days
@@ -1205,7 +1225,7 @@ disabled={reqLoading}
   >
     Add
   </button>
-</div>    <div className="text-xs text-gray-600">{r.state}  ·  {r.trade}  ·  {r.requirement_type}</div>  </div></li>
+</div>    <div className="text-xs text-gray-600">{r.state}  Â·  {r.trade}  Â·  {r.requirement_type}</div>  </div></li>
 ))}
 </ul>
 )}
@@ -1269,6 +1289,13 @@ disabled={reqLoading}
   </div></div>
 )
 }
+
+
+
+
+
+
+
 
 
 
