@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     const stripeSecretKey = requireEnv("STRIPE_SECRET_KEY")
     const priceStarter = requireEnv("NEXT_PUBLIC_STRIPE_PRICE_STARTER")
     const pricePro = requireEnv("NEXT_PUBLIC_STRIPE_PRICE_PRO")
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "")
 
     const body = await req.json().catch(() => ({}))
     const org_id = String(body.org_id || "").trim()
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
 
     // ✅ Guard: if already active, return a Billing Portal link instead of making a new subscription
     if (billingStatus === "active" && existingSubId && existingCustomerId) {
-      const return_url = "http://localhost:3000/dashboard-premium?billing=portal_return"
+      const return_url = `${siteUrl}/dashboard-premium?billing=portal_return`
       const portal = await stripe.billingPortal.sessions.create({
         customer: existingCustomerId,
         return_url,
@@ -69,8 +70,8 @@ export async function POST(req: Request) {
 
     const price = plan === "pro" ? pricePro : priceStarter
 
-    const success_url = "http://localhost:3000/dashboard-premium?billing=success"
-    const cancel_url = "http://localhost:3000/dashboard-premium?billing=cancel"
+    const success_url = `${siteUrl}/dashboard-premium?billing=success`
+    const cancel_url = `${siteUrl}/dashboard-premium?billing=cancel`
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -94,6 +95,7 @@ export async function POST(req: Request) {
     )
   }
 }
+
 
 
 
