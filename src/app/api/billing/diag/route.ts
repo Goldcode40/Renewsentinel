@@ -27,11 +27,11 @@ export async function GET(req: Request) {
     
 const { searchParams } = new URL(req.url)
 const orgId = (searchParams.get("org_id") || "").trim()
-const setActive = searchParams.get("set_active") === "1"
+const setActive = (searchParams.get("set_active") || "").trim()
 const planParam = (searchParams.get("plan") || "starter").trim()
 
 // DEV-ONLY: allow forcing an org into "active" for end-to-end validation
-if (setActive) {
+if (setActive === "1" || setActive === "0") {
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json({ ok: false, where: "diag", error: "set_active is disabled in production" }, { status: 403 })
   }
@@ -39,9 +39,12 @@ if (setActive) {
     return NextResponse.json({ ok: false, where: "diag", error: "missing org_id" }, { status: 400 })
   }
   const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  const patch = (setActive === "1")
+    ? { billing_status: "active", plan: planParam, current_period_end: periodEnd }
+    : { billing_status: null, plan: "free", current_period_end: null, stripe_subscription_id: null, stripe_price_id: null }
   const upd = await supa
     .from("organizations")
-    .update({ billing_status: "active", plan: planParam, current_period_end: periodEnd })
+    .update(patch)
     .eq("id", orgId)
     .select("id,name,plan,billing_status,current_period_end")
     .maybeSingle()
@@ -90,4 +93,5 @@ if (setActive) {
     return NextResponse.json({ ok: false, where: "fatal", error: e?.message ?? String(e) }, { status: 500 })
   }
 }
+
 
