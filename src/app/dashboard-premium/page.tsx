@@ -796,10 +796,34 @@ onChange={(e) => setOrgId(e.target.value)}
                 Renews: <span className="font-medium">{(orgs.find(o => o.id === orgId)?.current_period_end ?? "—")}</span>
               </div>
               {!isActive ? (
-                <div className="mt-1 text-xs text-red-600 font-medium">
-                  Billing is not active. Start your trial or subscribe to unlock reminders, exports, and tracking.
-                </div>
-              ) : null}<div className="flex flex-col gap-1">
+  <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div>
+      <div className="text-sm font-semibold text-blue-900">🔒 You're on Free Tracking</div>
+      <div className="text-xs text-blue-900/80">
+        Upgrade to automate reminders, export proof packs, and unlock insurance & subcontractor tracking.
+      </div>
+    </div>
+    <div className="flex gap-2">
+      <button
+        className="h-10 rounded bg-blue-600 text-white px-4 text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
+        onClick={() => goBilling("checkout")}
+        disabled={!orgId}
+        title="Start subscription"
+      >
+        Start free trial
+      </button>
+      <button
+        className="h-10 rounded border border-blue-300 bg-white px-4 text-sm font-medium hover:bg-blue-100 disabled:opacity-50"
+        onClick={() => goBilling("portal")}
+        disabled={!orgId}
+        title="Manage billing"
+      >
+        Manage billing
+      </button>
+    </div>
+  </div>
+) : null}
+<div className="flex flex-col gap-1">
 <label className="text-sm font-medium">Window (days)</label>
 <input
 className="h-10 w-28 rounded border px-3"
@@ -1310,6 +1334,7 @@ disabled={reqLoading}
   </div></div>
 )
 }
+
 
 
 
