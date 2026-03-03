@@ -1,4 +1,4 @@
-﻿-- Phase 8: Stripe billing fields + idempotent webhook event log
+-- Phase 8: Stripe billing fields + idempotent webhook event log
 
 -- 1) Add billing columns to organizations
 alter table if exists public.organizations

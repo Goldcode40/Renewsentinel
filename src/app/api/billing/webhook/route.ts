@@ -1,154 +1,168 @@
 ﻿import { NextResponse } from "next/server"
 import Stripe from "stripe"
-import { createClient } from "@supabase/supabase-js"
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
 
 export const runtime = "nodejs"
 
-// Stripe client
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
-  // apiVersion is optional; leaving it out avoids TS type mismatch issues across Stripe versions
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2026-02-25.clover",
 })
 
-// Supabase service client (bypasses RLS)
-function supabaseAdmin() {
-  const url =
-    process.env.SUPABASE_URL ??
-    process.env.NEXT_PUBLIC_SUPABASE_URL ??
-    ""
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""
-
-  if (!url || !key) throw new Error("Missing SUPABASE URL or SERVICE ROLE KEY")
-
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
+function ok(body: any, status = 200) {
+  return new NextResponse(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
   })
 }
 
-async function recordEvent(sb: ReturnType<typeof supabaseAdmin>, evt: Stripe.Event, extra: any) {
-  // Best-effort insert. If it fails, we still continue (webhook should not die on logging).
+export async function POST(req: Request) {
+  const supabase = getSupabaseAdmin()
+
   try {
-    const payload = {
-      id: evt.id,
-      type: evt.type,
-      created: new Date((evt.created ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
-      raw_event: evt as any,
-      ...extra,
+    const sig = req.headers.get("stripe-signature")
+    if (!sig) return ok({ ok: false, error: "missing stripe-signature" }, 400)
+
+    const whsec = process.env.STRIPE_WEBHOOK_SECRET
+    if (!whsec) return ok({ ok: false, error: "missing STRIPE_WEBHOOK_SECRET" }, 500)
+
+    // IMPORTANT: Stripe needs the raw body for signature verification
+    const rawBody = await req.text()
+
+    let event: Stripe.Event
+    try {
+      event = stripe.webhooks.constructEvent(rawBody, sig, whsec)
+    } catch (e: any) {
+      return ok({ ok: false, error: "signature verification failed", message: e?.message }, 400)
     }
 
-    // If you've got a UNIQUE PK on id, this avoids duplicate crashes
-    // (insert will fail if exists; we ignore)
-    await sb.from("stripe_events").insert(payload)
-  } catch {
-    // swallow
-  }
-}
+    // 1) Idempotency: store the event once (always)
+    const insertRes = await supabase
+      .from("stripe_events")
+      .insert({
+        id: event.id,
+        type: event.type,
+        payload: event as any,
+      })
+      .select("id")
 
-export async function POST(req: Request) {
-  const whsec = process.env.STRIPE_WEBHOOK_SECRET
-  if (!whsec) {
-    return NextResponse.json({ ok: false, error: "Missing STRIPE_WEBHOOK_SECRET" }, { status: 500 })
-  }
+    if (insertRes.error) {
+      // If already inserted, ignore. Otherwise surface error.
+      const exists = await supabase.from("stripe_events").select("id").eq("id", event.id).maybeSingle()
+      if (!exists.data) {
+        return ok({ ok: false, where: "stripe_events insert", error: insertRes.error }, 500)
+      }
+      return ok({ ok: true, duplicate: true, id: event.id, type: event.type })
+    }
 
-  // Read raw body for signature verification
-  const sig = req.headers.get("stripe-signature")
-  if (!sig) {
-    return NextResponse.json({ ok: false, error: "Missing Stripe-Signature header" }, { status: 400 })
-  }
+    async function updateOrgById(orgId: string, patch: any) {
+      return supabase.from("organizations").update(patch).eq("id", orgId).select("id").maybeSingle()
+    }
 
-  const raw = Buffer.from(await req.arrayBuffer())
+    async function findOrgIdsByCustomer(customerId: string) {
+      const res = await supabase.from("organizations").select("id").eq("stripe_customer_id", customerId)
+      return res
+    }
 
-  let event: Stripe.Event
-  try {
-    event = stripe.webhooks.constructEvent(raw, sig, whsec)
-  } catch (err: any) {
-    return NextResponse.json(
-      { ok: false, error: "Signature verification failed", detail: err?.message ?? String(err) },
-      { status: 400 }
-    )
-  }
-
-  const sb = supabaseAdmin()
-
-  // Default: log everything, but only act on what we care about
-  try {
+    // 2) Handle events
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session
 
-      const orgId = (session.metadata?.org_id ?? "") as string
-      const plan = (session.metadata?.plan ?? "") as string
+      const orgId = (session.metadata?.org_id || "").trim()
+      const plan = (session.metadata?.plan || "").trim()
+      const customerId = typeof session.customer === "string" ? session.customer : ""
+      const subscriptionId = typeof session.subscription === "string" ? session.subscription : ""
 
-      const customerId = typeof session.customer === "string" ? session.customer : (session.customer?.id ?? null)
-      const subscriptionId =
-        typeof session.subscription === "string" ? session.subscription : (session.subscription?.id ?? null)
-
-      const paymentStatus = (session.payment_status ?? null) as any
-      const sessionId = session.id
-
-      // Record event first
-      await recordEvent(sb, event, {
-        session_id: sessionId,
-        meta_org_id: orgId || null,
-        meta_plan: plan || null,
-        customer_id: customerId,
-        subscription_id: subscriptionId,
-        payment_status: paymentStatus,
-      })
-
-      // If metadata is missing, we can't tie to an org — don't 500, just ack.
+      // If no org_id metadata, we can't attribute this checkout to an org reliably.
+      // We still return 200 to avoid Stripe retry loops.
       if (!orgId) {
-        return NextResponse.json({ ok: true, note: "No org_id in metadata; logged only" })
+        return ok({
+          ok: true,
+          note: "checkout.session.completed missing metadata.org_id; not attaching to org",
+          id: event.id,
+          mode: (session as any).mode,
+        })
       }
 
-      // If this was a subscription checkout, pull canonical values from Stripe
-      let stripePriceId: string | null = null
-      let periodEndIso: string | null = null
-      let trialEndIso: string | null = null
-      let billingStatus: string | null = null
+      const patch: any = {
+        plan: plan || "starter",
+        billing_status: "active",
+        stripe_customer_id: customerId || null,
+        stripe_subscription_id: subscriptionId || null,
+      }
 
+      // If it was a subscription checkout, fetch subscription to capture price + period end
       if (subscriptionId) {
         const sub = await stripe.subscriptions.retrieve(subscriptionId)
 
-        stripePriceId = sub.items?.data?.[0]?.price?.id ?? null
-        periodEndIso = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null
-        trialEndIso = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null
-        billingStatus = sub.status ?? null
-      } else {
-        // One-time payment checkout: treat as paid but no subscription
-        billingStatus = paymentStatus === "paid" ? "active" : "inactive"
+        const priceId =
+          (sub.items.data?.[0]?.price?.id as string | undefined) ||
+          (sub.items.data?.[0]?.plan?.id as string | undefined)
+
+        if (priceId) patch.stripe_price_id = priceId
+        if (sub.current_period_end) patch.current_period_end = new Date(sub.current_period_end * 1000).toISOString()
       }
 
-      const update: any = {
-        billing_status: billingStatus === "active" ? "active" : (billingStatus ?? "active"),
-        stripe_customer_id: customerId,
-        stripe_subscription_id: subscriptionId,
-      }
+      const upd = await updateOrgById(orgId, patch)
+      if (upd.error) return ok({ ok: false, where: "org update (checkout.session.completed)", error: upd.error }, 500)
 
-      if (plan) update.plan = plan
-      if (stripePriceId) update.stripe_price_id = stripePriceId
-      if (periodEndIso) update.current_period_end = periodEndIso
-      if (trialEndIso) update.trial_ends_at = trialEndIso
-
-      const { error } = await sb
-        .from("organizations")
-        .update(update)
-        .eq("id", orgId)
-
-      if (error) {
-        // Return 200 so Stripe doesn't retry forever, but include details for your logs
-        return NextResponse.json({ ok: true, updated: false, orgId, error }, { status: 200 })
-      }
-
-      return NextResponse.json({ ok: true, updated: true, orgId, subscriptionId, stripePriceId })
+      return ok({ ok: true, handled: event.type, org_id: orgId })
     }
 
-    // For all other event types, just log and ack
-    await recordEvent(sb, event, {})
-    return NextResponse.json({ ok: true })
-  } catch (err: any) {
-    // Ack with 200 to avoid Stripe retry storms, but give you the error in response/log
-    return NextResponse.json(
-      { ok: true, note: "handler error (acked)", error: err?.message ?? String(err), type: event.type },
-      { status: 200 }
-    )
+    if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
+      const sub = event.data.object as Stripe.Subscription
+
+      const customerId = typeof sub.customer === "string" ? sub.customer : ""
+      const subscriptionId = sub.id
+
+      const priceId =
+        (sub.items.data?.[0]?.price?.id as string | undefined) ||
+        (sub.items.data?.[0]?.plan?.id as string | undefined)
+
+      const patch: any = {
+        billing_status: sub.status === "active" ? "active" : sub.status,
+        stripe_customer_id: customerId || null,
+        stripe_subscription_id: subscriptionId || null,
+      }
+      if (priceId) patch.stripe_price_id = priceId
+      if (sub.current_period_end) patch.current_period_end = new Date(sub.current_period_end * 1000).toISOString()
+
+      if (!customerId) {
+        return ok({ ok: true, handled: event.type, note: "subscription event missing customer id" })
+      }
+
+      // SAFETY: Only update when customer_id maps to exactly 1 org
+      const found = await findOrgIdsByCustomer(customerId)
+      if (found.error) return ok({ ok: false, where: "org lookup (stripe_customer_id)", error: found.error }, 500)
+
+      const orgIds = (found.data || []).map((r: any) => r.id)
+
+      if (orgIds.length === 0) {
+        return ok({
+          ok: true,
+          handled: event.type,
+          note: "no org matched stripe_customer_id; not updating",
+          stripe_customer_id: customerId,
+        })
+      }
+
+      if (orgIds.length > 1) {
+        return ok({
+          ok: true,
+          handled: event.type,
+          warning: "multiple orgs matched stripe_customer_id; not updating",
+          stripe_customer_id: customerId,
+          org_ids: orgIds,
+        })
+      }
+
+      const upd = await updateOrgById(orgIds[0], patch)
+      if (upd.error) return ok({ ok: false, where: "org update (subscription.*)", error: upd.error }, 500)
+
+      return ok({ ok: true, handled: event.type, org_id: orgIds[0] })
+    }
+
+    return ok({ ok: true, ignored: event.type })
+  } catch (e: any) {
+    return ok({ ok: false, error: e?.message || String(e) }, 500)
   }
 }
