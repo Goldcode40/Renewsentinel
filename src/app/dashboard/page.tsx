@@ -7,6 +7,10 @@ type Org = {
   role: string
   profile_state?: string | null
   profile_trade?: string | null
+
+  plan?: string | null
+  billing_status?: string | null
+  current_period_end?: string | null
 }
 type Item = {
 id: string
@@ -196,8 +200,29 @@ const [renewalWindowDays, setRenewalWindowDays] = useState<number>(30)
 const [creating, setCreating] = useState(false)
 const selectedOrg = useMemo(() => orgs.find(o => o.id === orgId), [orgs, orgId])
 
+async function goBilling(mode: "checkout" | "portal") {
+  try {
+    setErr("")
+    if (!orgId) return
+    const endpoint = mode === "portal" ? "/api/billing/portal" : "/api/billing/checkout"
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ org_id: orgId }),
+    })
+    const json = await res.json().catch(() => ({} as any))
+    const url = json?.url ?? json?.portal_url
+    if (!res.ok || !url) {
+      setErr(json?.error ?? ("Billing request failed (" + res.status + ")"))
+      return
+    }
+    window.location.href = url
+  } catch (e: any) {
+    setErr(e?.message ?? "Billing request failed")
+  }
+}
 
-  async function saveOrgProfile(nextState?: string, nextTrade?: string) {
+async function saveOrgProfile(nextState?: string, nextTrade?: string) {
     if (!orgId) return
     try {
       await fetch("/api/orgs/profile", {
@@ -374,7 +399,36 @@ return (
 <p className="text-sm text-gray-600">
 Dev user: <span className="font-mono">{DEV_USER_ID}</span>
 </p>
-</div>
+
+<div className="flex flex-wrap items-center gap-2">
+  {selectedOrg?.billing_status === "active" ? (
+    <button
+      type="button"
+      className="rounded bg-black px-3 py-2 text-sm text-white"
+      onClick={() => goBilling("portal")}
+      title="Open Stripe billing portal"
+    >
+      Manage Billing
+    </button>
+  ) : (
+    <button
+      type="button"
+      className="rounded bg-black px-3 py-2 text-sm text-white"
+      onClick={() => goBilling("checkout")}
+      title="Start subscription checkout"
+    >
+      Subscribe
+    </button>
+  )}
+
+  <span className="text-xs text-gray-600">
+    Plan: <span className="font-mono">{selectedOrg?.plan ?? "free"}</span>{" "}
+    | Status: <span className="font-mono">{selectedOrg?.billing_status ?? "inactive"}</span>
+    {selectedOrg?.current_period_end ? (
+      <> | Renews: <span className="font-mono">{String(selectedOrg.current_period_end).slice(0, 10)}</span></>
+    ) : null}
+  </span>
+</div></div>
 {err ? (
 <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
 {err}
@@ -607,7 +661,7 @@ disabled={!orgId || creating}
 <span className="text-sm text-gray-600">{items.length} item(s)</span>
 </div>
 {loadingItems ? (
-<div className="text-sm text-gray-600">LoadingΓÇª</div>
+<div className="text-sm text-gray-600">LoadingÃŽâ€œÃƒâ€¡Ã‚Âª</div>
 ) : items.length === 0 ? (
 <div className="text-sm text-gray-600">No items within window.</div>
 ) : (
@@ -619,8 +673,8 @@ disabled={!orgId || creating}
 <div className="font-medium">{it.title}</div>
 <div className="text-sm text-gray-600">
 <span className="font-mono">{it.type}</span>
-{it.issuer ? <> ┬╖ {it.issuer}</> : null}
-{it.identifier ? <> ┬╖ {it.identifier}</> : null}
+{it.issuer ? <> Ã¢â€Â¬Ã¢â€¢â€“ {it.issuer}</> : null}
+{it.identifier ? <> Ã¢â€Â¬Ã¢â€¢â€“ {it.identifier}</> : null}
 </div>
 </div>
 <div className="flex flex-col items-end gap-2">
@@ -637,7 +691,7 @@ if (confirm("Delete this item?")) deleteItem(it.id)
 }}
 title="Delete"
 >
-≡ƒùæ∩╕Å Delete
+Ã¢â€°Â¡Ã†â€™ÃƒÂ¹ÃƒÂ¦Ã¢Ë†Â©Ã¢â€¢â€¢Ãƒâ€¦ Delete
 </button>
 <button
 className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
@@ -648,7 +702,7 @@ updateItem(it.id, { title: nextTitle.trim() })
 }}
 title="Edit title"
 >
-Γ£Å∩╕Å Edit
+ÃŽâ€œÃ‚Â£Ãƒâ€¦Ã¢Ë†Â©Ã¢â€¢â€¢Ãƒâ€¦ Edit
 </button>
 <form
 className="mt-2 flex flex-col gap-2"
@@ -741,7 +795,7 @@ Delete latest doc
 <div className="mt-2 text-sm text-gray-700">
 Expires: <span className="font-mono">{it.expires_on}</span>
 {typeof it.renewal_window_days === "number" ? (
-<> ┬╖ Window: {it.renewal_window_days}d</>
+<> Ã¢â€Â¬Ã¢â€¢â€“ Window: {it.renewal_window_days}d</>
 ) : null}
 </div>
 </li>
@@ -845,7 +899,7 @@ disabled={reqLoading}
   >
     Add
   </button>
-</div>    <div className="text-xs text-gray-600">{r.state} ΓÇó {r.trade} ΓÇó {r.requirement_type}</div>  </div></li>
+</div>    <div className="text-xs text-gray-600">{r.state} ÃŽâ€œÃƒâ€¡ÃƒÂ³ {r.trade} ÃŽâ€œÃƒâ€¡ÃƒÂ³ {r.requirement_type}</div>  </div></li>
 ))}
 </ul>
 )}
@@ -867,7 +921,7 @@ disabled={reqLoading}
                 disabled={applySaving}
                 title="Close"
               >
-                Γ£ò
+                ÃŽâ€œÃ‚Â£ÃƒÂ²
               </button>
             </div>
 
@@ -908,6 +962,10 @@ disabled={reqLoading}
 </main>
 )
 }
+
+
+
+
 
 
 
