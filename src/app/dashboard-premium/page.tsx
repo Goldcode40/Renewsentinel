@@ -227,11 +227,6 @@ const [renewalWindowDays, setRenewalWindowDays] = useState<number>(30)
 const [creating, setCreating] = useState(false)
 const selectedOrg = useMemo(() => orgs.find(o => o.id === orgId), [orgs, orgId])
 
-useEffect(() => {
-  console.log("RS selectedOrg", selectedOrg)
-}, [selectedOrg])
-
-
 async function goBilling(mode: "checkout" | "portal") {
   try {
     setErr("")
@@ -1302,6 +1297,7 @@ disabled={reqLoading}
   </div></div>
 )
 }
+
 
 
 
