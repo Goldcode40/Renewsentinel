@@ -1,5 +1,6 @@
 ﻿"use client"
 import { useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
 type Org = {
   id: string
   name: string
@@ -228,9 +229,13 @@ const [identifier, setIdentifier] = useState<string>("")
 const [expiresOn, setExpiresOn] = useState<string>("")
 const [renewalWindowDays, setRenewalWindowDays] = useState<number>(30)
 const [creating, setCreating] = useState(false)
+const searchParams = useSearchParams()
+
+
 const selectedOrg = useMemo(() => orgs.find(o => o.id === orgId), [orgs, orgId])
 
 const isActive = (String(selectedOrg?.billing_status ?? "").trim().toLowerCase() === "active")
+const showUpgrade = (!isActive) || (searchParams.get("show_upgrade") === "1")
 async function goBilling(mode: "checkout" | "portal") {
   try {
     setErr("")
@@ -795,7 +800,7 @@ onChange={(e) => setOrgId(e.target.value)}
                 {" · "}
                 Renews: <span className="font-medium">{(orgs.find(o => o.id === orgId)?.current_period_end ?? "—")}</span>
               </div>
-              {!isActive ? (
+              {showUpgrade ? (
   <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
     <div>
       <div className="text-sm font-semibold text-blue-900">🔒 You're on Free Tracking</div>
@@ -1334,6 +1339,8 @@ disabled={reqLoading}
   </div></div>
 )
 }
+
+
 
 
 
