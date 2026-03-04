@@ -1,10 +1,23 @@
 ﻿import { NextResponse } from "next/server";
 import { google } from "googleapis";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireActiveOrTrial } from "@/lib/billingGate";
 
 export async function GET(req: Request) {
   try {
     const urlObj = new URL(req.url);
     const orgId = urlObj.searchParams.get("org_id") || "";
+
+    const supabase = getSupabaseAdmin();
+    // HARD GATE: GCAL Auth URL is premium-only (active subscription OR active trial)
+    const gate = await requireActiveOrTrial(supabase as any, orgId);
+    if (!gate.ok) {
+      return NextResponse.json(
+        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { status: 403 }
+      );
+    }
+
 
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
