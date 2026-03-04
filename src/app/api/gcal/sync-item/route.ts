@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server"
+﻿import { NextResponse } from "next/server"
 import { google } from "googleapis"
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
+import { requireActiveOrTrial } from "@/lib/billingGate"
 
 const ENTITY_TYPE = "compliance_item"
 
@@ -21,6 +22,16 @@ export async function POST(req: Request) {
     }
 
     const supabase = getSupabaseAdmin()
+
+    // HARD GATE: GCAL Sync Item is premium-only (active subscription OR active trial)
+    const gate = await requireActiveOrTrial(supabase as any, orgId)
+    if (!gate.ok) {
+      return NextResponse.json(
+        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { status: 403 }
+      )
+    }
+
 
     // 1) Fetch item (minimal fields)
     const { data: item, error: itemErr } = await supabase
