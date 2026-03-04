@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from "next/server";
 import { google } from "googleapis";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireActiveOrTrial } from "@/lib/billingGate"
 
 function extractDates(text: string) {
   const hits = new Set<string>();
@@ -36,6 +37,16 @@ export async function GET(req: Request) {
     }
 
     const supabase = getSupabaseAdmin();
+
+    // HARD GATE: Email Expiries Scan is premium-only (active subscription OR active trial)
+    const gate = await requireActiveOrTrial(supabase as any, orgId)
+    if (!gate.ok) {
+      return NextResponse.json(
+        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { status: 403 }
+      )
+    }
+
 
     const { data: tok, error: tokErr } = await supabase
       .from("oauth_tokens")

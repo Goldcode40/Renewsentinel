@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireActiveOrTrial } from "@/lib/billingGate"
 
 type Body = {
   org_id: string;
@@ -30,6 +31,16 @@ export async function POST(req: Request) {
     }
 
     const sb = createClient(url, serviceKey, { auth: { persistSession: false } });
+
+    // HARD GATE: Email Expiries Link Item is premium-only (active subscription OR active trial)
+    const gate = await requireActiveOrTrial(sb as any, body.org_id)
+    if (!gate.ok) {
+      return NextResponse.json(
+        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { status: 403 }
+      )
+    }
+
 
     // Upsert link (unique should be org_id + email_expiry_id + compliance_item_id if you add it later;
     // for now we do insert + ignore conflict by checking first)
