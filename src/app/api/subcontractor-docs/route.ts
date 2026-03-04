@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireActiveOrTrial } from "@/lib/billingGate"
 
 // Subcontractor Documents
 // GET  /api/subcontractor-docs?org_id=UUID&subcontractor_id=UUID
@@ -20,6 +21,16 @@ function getSupabase() {
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const org_id = (searchParams.get("org_id") || "").trim();
+
+    // HARD GATE: Subcontractor Docs is premium-only (active subscription OR active trial)
+    const gate = await requireActiveOrTrial(supabase as any, org_id)
+    if (!gate.ok) {
+      return NextResponse.json(
+        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { status: 403 }
+      )
+    }
+
   const subcontractor_id = (searchParams.get("subcontractor_id") || "").trim();
 
   if (!org_id || !subcontractor_id) {

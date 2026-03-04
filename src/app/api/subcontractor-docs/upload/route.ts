@@ -1,4 +1,5 @@
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
+﻿import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
+import { requireActiveOrTrial } from "@/lib/billingGate"
 
 export const runtime = "nodejs"
 
@@ -10,6 +11,16 @@ export async function POST(req: Request) {
 
     const form = await req.formData()
     const orgId = String(form.get("org_id") ?? "").trim()
+
+    // HARD GATE: Subcontractor Docs Upload is premium-only (active subscription OR active trial)
+    const gate = await requireActiveOrTrial(supabaseAdmin as any, orgId)
+    if (!gate.ok) {
+      return Response.json(
+        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { status: 403 }
+      )
+    }
+
     const subcontractorId = String(form.get("subcontractor_id") ?? "").trim()
     const docId = String(form.get("doc_id") ?? "").trim() // optional (existing row)
     const file = form.get("file")
