@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireActiveOrTrial } from "@/lib/billingGate";
 
 function sb() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -19,11 +20,22 @@ export async function POST(req: NextRequest) {
     const form = await req.formData();
 
     const org_id = String(form.get("org_id") || "").trim();
+
+    if (!org_id) return NextResponse.json({ ok: false, error: "org_id required" }, { status: 400 });
+
+    // HARD GATE: Concierge Upload is premium-only (active subscription OR active trial)
+    const gate = await requireActiveOrTrial(supabase as any, org_id);
+    if (!gate.ok) {
+      return NextResponse.json(
+        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { status: 403 }
+      );
+    }
+
     const request_id = String(form.get("request_id") || "").trim();
     const doc_type = String(form.get("doc_type") || "other").trim() || "other";
     const file = form.get("file");
 
-    if (!org_id) return NextResponse.json({ ok: false, error: "org_id required" }, { status: 400 });
     if (!request_id) return NextResponse.json({ ok: false, error: "request_id required" }, { status: 400 });
     if (!file || !(file instanceof File)) {
       return NextResponse.json({ ok: false, error: "file required" }, { status: 400 });
@@ -52,7 +64,7 @@ export async function POST(req: NextRequest) {
     const original = file.name || "upload";
     const safeName = original.replace(/[^a-zA-Z0-9._-]/g, "_");
     const ts = new Date().toISOString().replace(/[:.]/g, "-");
-    const path = `${org_id}/${request_id}/${ts}_${safeName}`;
+    const storagePath = `${org_id}/${request_id}/${ts}_${safeName}`;
 
     // Upload to storage
     const arrayBuffer = await file.arrayBuffer();
@@ -60,7 +72,7 @@ export async function POST(req: NextRequest) {
 
     const { error: upErr } = await supabase.storage
       .from(bucket)
-      .upload(path, bytes, {
+      .upload(storagePath, bytes, {
         contentType: file.type || "application/octet-stream",
         upsert: false,
       });
@@ -74,7 +86,7 @@ export async function POST(req: NextRequest) {
         request_id,
         doc_type,
         bucket,
-        path,
+        path: storagePath,
         original_filename: original,
         mime_type: file.type || null,
         size_bytes: typeof file.size === "number" ? file.size : null,

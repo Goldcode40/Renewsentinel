@@ -1,8 +1,10 @@
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
+﻿import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
+import { requireActiveOrTrial } from "@/lib/billingGate"
 
 export async function GET(req: Request) {
   try {
     const supabaseAdmin = getSupabaseAdmin()
+
     const url = new URL(req.url)
 
     const orgId = (url.searchParams.get("org_id") ?? "").trim()
@@ -11,6 +13,15 @@ export async function GET(req: Request) {
     const expiresIn = Math.max(60, Math.min(3600, parseInt(expiresParam, 10) || 600))
 
     if (!orgId) return Response.json({ ok: false, error: "Missing org_id" }, { status: 400 })
+    // HARD GATE: Insurance Doc URL is premium-only (active subscription OR active trial)
+    const gate = await requireActiveOrTrial(supabaseAdmin as any, orgId)
+    if (!gate.ok) {
+      return Response.json(
+        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { status: 403 }
+      )
+    }
+
     if (!policyId) return Response.json({ ok: false, error: "Missing policy_id" }, { status: 400 })
 
     const { data: p, error: pErr } = await supabaseAdmin

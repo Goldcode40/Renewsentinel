@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+﻿import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
 export const dynamic = "force-dynamic"
@@ -22,6 +22,16 @@ export async function GET(req: NextRequest) {
     if (!doc_id) return NextResponse.json({ ok: false, error: "doc_id is required" }, { status: 400 })
 
     const sb = supabaseAdmin()
+
+    // HARD GATE: Concierge Doc URL is premium-only (active subscription OR active trial)
+    const gate = await requireActiveOrTrial(sb as any, org_id)
+    if (!gate.ok) {
+      return NextResponse.json(
+        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { status: 403 }
+      )
+    }
+
 
     // 1) Load document row
     const docRes = await sb

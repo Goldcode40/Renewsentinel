@@ -1,5 +1,7 @@
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
+﻿import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
 
+
+import { requireActiveOrTrial } from "@/lib/billingGate"
 export async function GET(req: Request) {
   try {
     const supabaseAdmin = getSupabaseAdmin()
@@ -19,10 +21,18 @@ export async function GET(req: Request) {
     const orgId = (url.searchParams.get("org_id") ?? "").trim()
 
     if (!orgId) {
-      return Response.json({ ok: false, error: "Missing org_id" }, { status: 400 })
-    }
+  return Response.json({ ok: false, error: "Missing org_id" }, { status: 400 })
+}
 
-    // org
+// HARD GATE: Proof Pack is premium-only (active subscription OR active trial)
+const gate = await requireActiveOrTrial(supabaseAdmin as any, orgId)
+if (!gate.ok) {
+  return Response.json(
+    { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+    { status: 403 }
+  )
+}
+// org
     const orgRes = await supabaseAdmin
       .from("organizations")
       .select("id, name, created_at, profile_state, profile_trade")
@@ -172,3 +182,5 @@ const pack = {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
+

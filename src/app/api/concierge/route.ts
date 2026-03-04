@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireActiveOrTrial } from "@/lib/billingGate";
 
 type MemberRole = "owner" | "admin" | "member";
 
@@ -37,6 +38,16 @@ export async function GET(req: NextRequest) {
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
 
     const supabaseAdmin = getSupabaseAdmin();
+
+    // HARD GATE: Concierge is premium-only (active subscription OR active trial)
+    const gate = await requireActiveOrTrial(supabaseAdmin as any, org_id)
+    if (!gate.ok) {
+      return NextResponse.json(
+        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { status: 403 }
+      )
+    }
+
 
     const authz = await requireOrgAdmin(supabaseAdmin, org_id, user_id);
     if (!authz.ok) {
@@ -87,6 +98,16 @@ export async function POST(req: NextRequest) {
     if (!user_id) return NextResponse.json({ error: "user_id required" }, { status: 400 });
 
     const supabaseAdmin = getSupabaseAdmin();
+
+    // HARD GATE: Concierge is premium-only (active subscription OR active trial)
+    const gate = await requireActiveOrTrial(supabaseAdmin as any, org_id)
+    if (!gate.ok) {
+      return NextResponse.json(
+        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { status: 403 }
+      )
+    }
+
 
     const authz = await requireOrgAdmin(supabaseAdmin, org_id, user_id);
     if (!authz.ok) {

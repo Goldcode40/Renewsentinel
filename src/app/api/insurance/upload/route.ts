@@ -1,4 +1,5 @@
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
+﻿import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
+import { requireActiveOrTrial } from "@/lib/billingGate"
 
 export const runtime = "nodejs"
 
@@ -14,6 +15,16 @@ export async function POST(req: Request) {
     const file = form.get("file")
 
     if (!orgId) return Response.json({ ok: false, error: "Missing org_id" }, { status: 400 })
+
+    // HARD GATE: Insurance Upload is premium-only (active subscription OR active trial)
+    const gate = await requireActiveOrTrial(supabaseAdmin as any, orgId)
+    if (!gate.ok) {
+      return Response.json(
+        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { status: 403 }
+      )
+    }
+
     if (!policyId) return Response.json({ ok: false, error: "Missing policy_id" }, { status: 400 })
     if (!(file instanceof File)) return Response.json({ ok: false, error: "Missing file" }, { status: 400 })
 

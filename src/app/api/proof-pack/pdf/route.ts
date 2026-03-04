@@ -1,4 +1,6 @@
 ﻿import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
+
+import { requireActiveOrTrial } from "@/lib/billingGate"
 import { PDFDocument, StandardFonts } from "pdf-lib"
 import QRCode from "qrcode"
 
@@ -21,16 +23,15 @@ export async function GET(req: Request) {
 
     if (orgRes.error) return Response.json({ ok: false, error: orgRes.error.message }, { status: 500 })
     if (!orgRes.data) return Response.json({ ok: false, error: "Org not found" }, { status: 404 })
-
-// HARD GATE: Proof Pack is premium-only
-const billingStatus = String((orgRes.data as any)?.billing_status ?? "").trim().toLowerCase()
-if (billingStatus !== "active") {
-  return Response.json(
-    { ok: false, error: "Billing inactive. Upgrade required." },
-    { status: 403 }
-  )
-}
-// items
+    // HARD GATE: Proof Pack is premium-only (active subscription OR active trial)
+    const gate = await requireActiveOrTrial(supabaseAdmin as any, orgId)
+    if (!gate.ok) {
+      return Response.json(
+        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { status: 403 }
+      )
+    }
+// items
     const itemsRes = await supabaseAdmin
       .from("compliance_items")
       .select("id, org_id, type, title, issuer, identifier, expires_on, renewal_window_days, status, created_at, updated_at")
@@ -358,3 +359,4 @@ if (billingStatus !== "active") {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
