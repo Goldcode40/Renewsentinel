@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireActiveOrTrial } from "@/lib/billingGate";
 
 // PATCH  /api/insurance/:id   { org_id, ...fields }
 // DELETE /api/insurance/:id   { org_id }
@@ -56,6 +57,16 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   }
 
   const { supabase, error: cfgErr } = getSupabase();
+
+  // HARD GATE: Insurance By ID PATCH is premium-only (active subscription OR active trial)
+  const gate = await requireActiveOrTrial(supabase as any, org_id);
+  if (!gate.ok) {
+    return NextResponse.json(
+      { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+      { status: 403 }
+    );
+  }
+
   if (cfgErr) return NextResponse.json({ error: cfgErr }, { status: 500 });
 
   const { data, error } = await supabase
@@ -88,6 +99,16 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   if (!org_id) return NextResponse.json({ error: "Missing required field: org_id" }, { status: 400 });
 
   const { supabase, error: cfgErr } = getSupabase();
+
+  // HARD GATE: Insurance By ID DELETE is premium-only (active subscription OR active trial)
+  const gate = await requireActiveOrTrial(supabase as any, org_id);
+  if (!gate.ok) {
+    return NextResponse.json(
+      { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+      { status: 403 }
+    );
+  }
+
   if (cfgErr) return NextResponse.json({ error: cfgErr }, { status: 500 });
 
   const { error } = await supabase
