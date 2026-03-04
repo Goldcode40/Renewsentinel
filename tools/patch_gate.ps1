@@ -3,9 +3,9 @@
   [Parameter(Mandatory=$true)][string]$GateLabel
 )
 
-if (!(Test-Path $RoutePath)) { throw "Missing file: $RoutePath" }
+if (!(Test-Path -LiteralPath $RoutePath)) { throw "Missing file: $RoutePath" }
 
-$lines = Get-Content $RoutePath
+$lines = Get-Content -LiteralPath $RoutePath
 $raw   = $lines -join "`n"
 
 function Insert-AfterLine([string[]]$arr, [int]$lineNumber1Based, [string[]]$toInsert) {
@@ -82,8 +82,10 @@ if ($raw2 -notmatch [regex]::Escape("HARD GATE: $GateLabel")) {
   $lines = Insert-AfterLine $lines $insertAfter $gateBlock
 }
 
-Set-Content -Path $RoutePath -Value $lines -Encoding UTF8
+Set-Content -LiteralPath $RoutePath -Value $lines -Encoding UTF8
 "OK patched: $RoutePath"
 
-Select-String -Path $RoutePath -Pattern 'from "@/lib/billingGate"',"HARD GATE:\s*$([regex]::Escape($GateLabel))",'requireActiveOrTrial\(' -Context 0,2
+Select-String -LiteralPath $RoutePath -Pattern 'from "@/lib/billingGate"',"HARD GATE:\s*$([regex]::Escape($GateLabel))",'requireActiveOrTrial\(' -Context 0,2
+
+
 
