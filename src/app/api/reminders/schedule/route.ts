@@ -6,12 +6,17 @@ type Body = {
 }
 
 export async function POST(req: Request) {
-  try {
+  
+  const { searchParams } = new URL(req.url);
+  const orgFromQuery = (searchParams.get("org_id") || "").trim();
+
+  const org_id = orgFromQuery;
+try {
     const supabaseAdmin = getSupabaseAdmin()
     const body = (await req.json().catch(() => ({}))) as Body
 
-    const orgId = (body.org_id ?? "").trim()
-    const maxDays = typeof body.days === "number" ? Math.max(1, Math.min(3650, body.days)) : 90
+    const orgId = (orgFromQuery || String(body?.org_id ?? "")).trim()
+const maxDays = typeof body.days === "number" ? Math.max(1, Math.min(3650, body.days)) : 90
 
     if (!orgId) return Response.json({ ok: false, error: "Missing org_id" }, { status: 400 })
 
@@ -212,3 +217,7 @@ export async function POST(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
+
+
+
