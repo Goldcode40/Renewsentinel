@@ -234,8 +234,30 @@ const searchParams = useSearchParams()
 
 const selectedOrg = useMemo(() => orgs.find(o => o.id === orgId), [orgs, orgId])
 
-const isActive = (String(selectedOrg?.billing_status ?? "").trim().toLowerCase() === "active")
-const showUpgrade = (!isActive) || (searchParams.get("show_upgrade") === "1")
+const billingStatus = String(selectedOrg?.billing_status ?? "").trim().toLowerCase()
+const isPremium = (billingStatus === "active" || billingStatus === "trialing")
+const showUpgrade = (!isPremium) || (searchParams.get("show_upgrade") === "1")
+const DEV_TRIAL_ENABLED = (process.env.NEXT_PUBLIC_ENABLE_DEV_TRIAL === "1")
+async function startTrial() {
+  try {
+    setErr("")
+    if (!orgId) return
+    const res = await fetch("/api/dev/start-trial", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ org_id: orgId, days: 14 }),
+    })
+    const json = await res.json().catch(() => ({} as any))
+    if (!res.ok || !json?.ok) {
+      setErr(json?.error ?? "Failed to start trial")
+      return
+    }
+    await loadOrgs()
+  } catch (e: any) {
+    setErr(e?.message ?? "Failed to start trial")
+  }
+}
+
 async function goBilling(mode: "checkout" | "portal") {
   try {
     setErr("")
@@ -727,7 +749,8 @@ return (
       ))}
     </ul>
   )}
-</div>
+</div>
+
         <button
   type="button"
   className="mt-3 rounded border px-3 py-1 text-xs hover:bg-gray-50"
@@ -811,7 +834,7 @@ onChange={(e) => setOrgId(e.target.value)}
     <div className="flex gap-2">
       <button
         className="h-10 rounded bg-blue-600 text-white px-4 text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
-        onClick={() => goBilling("checkout")}
+        onClick={() => (DEV_TRIAL_ENABLED ? startTrial() : goBilling("checkout"))}
         disabled={!orgId}
         title="Start subscription"
       >
@@ -848,8 +871,8 @@ disabled={!orgId || loadingItems}
 <button
 className="h-10 rounded border px-4 disabled:opacity-50"
 onClick={scheduleReminders}
-disabled={!orgId || scheduling || !isActive}
-title={!isActive ? "Subscribe to enable reminders" : "Generate reminder events (deduped)"}
+disabled={!orgId || scheduling || !isPremium}
+title={!isPremium ? "Subscribe to enable reminders" : "Generate reminder events (deduped)"}
 >
 {scheduling ? "Scheduling..." : "Schedule reminders"}          </button>
 <button
@@ -858,8 +881,8 @@ onClick={() => {
 if (!orgId) return
 window.open(`/api/reminders?org_id=${orgId}&limit=50`, "_blank")
 }}
-disabled={!orgId || !isActive}
-title={!isActive ? "Subscribe to view reminders" : "Open scheduled reminders (JSON)"}
+disabled={!orgId || !isPremium}
+title={!isPremium ? "Subscribe to view reminders" : "Open scheduled reminders (JSON)"}
 >
 View reminders
 </button>
@@ -877,24 +900,24 @@ View reminders
               if (!orgId) return
               window.open(`/api/proof-pack/pdf?org_id=${orgId}`, "_blank")
             }}
-            disabled={!orgId || !isActive}
-            title={!isActive ? "Subscribe to export Proof Pack" : "Open Proof Pack export (PDF)"}
+            disabled={!orgId || !isPremium}
+            title={!isPremium ? "Subscribe to export Proof Pack" : "Open Proof Pack export (PDF)"}
           >
             Proof Pack (PDF)
           </button>
           <button
             className="h-10 rounded border px-4 text-sm"
             onClick={() => { window.location.href = "/insurance" }}
-            disabled={!orgId || !isActive}
-            title={!isActive ? "Subscribe to unlock Insurance" : "Go to Insurance Tracking"}
+            disabled={!orgId || !isPremium}
+            title={!isPremium ? "Subscribe to unlock Insurance" : "Go to Insurance Tracking"}
           >
             Insurance
           </button>
           <button
             className="h-10 rounded border px-4 text-sm"
             onClick={() => { window.location.href = "/subcontractors" }}
-            disabled={!orgId || !isActive}
-            title={!isActive ? "Subscribe to unlock Subcontractors" : "Go to Subcontractors"}
+            disabled={!orgId || !isPremium}
+            title={!isPremium ? "Subscribe to unlock Subcontractors" : "Go to Subcontractors"}
           >
             Subcontractors
           </button>
@@ -905,39 +928,39 @@ View reminders
               window.open(`/api/proof-pack?org_id=${orgId}`, "_blank")
             }}
             disabled={!orgId}
-            title={!isActive ? "Subscribe to export Proof Pack" : "Open Proof Pack export (JSON)"}
+            title={!isPremium ? "Subscribe to export Proof Pack" : "Open Proof Pack export (JSON)"}
           >
             Proof Pack (JSON)
           </button>
           <button
             className="h-10 rounded border px-4 text-sm"
             onClick={() => { window.location.href = "/insurance" }}
-            disabled={!orgId || !isActive}
-            title={!isActive ? "Subscribe to unlock Insurance" : "Go to Insurance Tracking"}
+            disabled={!orgId || !isPremium}
+            title={!isPremium ? "Subscribe to unlock Insurance" : "Go to Insurance Tracking"}
           >
             Insurance
           </button>
           <button
             className="h-10 rounded border px-4 text-sm"
             onClick={() => { window.location.href = "/subcontractors" }}
-            disabled={!orgId || !isActive}
-            title={!isActive ? "Subscribe to unlock Subcontractors" : "Go to Subcontractors"}
+            disabled={!orgId || !isPremium}
+            title={!isPremium ? "Subscribe to unlock Subcontractors" : "Go to Subcontractors"}
           >
             Subcontractors
           </button>
           <button
             className="h-10 rounded border px-4 text-sm"
             onClick={() => { window.location.href = "/insurance" }}
-            disabled={!orgId || !isActive}
-            title={!isActive ? "Subscribe to unlock Insurance" : "Go to Insurance Tracking"}
+            disabled={!orgId || !isPremium}
+            title={!isPremium ? "Subscribe to unlock Insurance" : "Go to Insurance Tracking"}
           >
             Insurance
           </button>
           <button
             className="h-10 rounded border px-4 text-sm"
             onClick={() => { window.location.href = "/subcontractors" }}
-            disabled={!orgId || !isActive}
-            title={!isActive ? "Subscribe to unlock Subcontractors" : "Go to Subcontractors"}
+            disabled={!orgId || !isPremium}
+            title={!isPremium ? "Subscribe to unlock Subcontractors" : "Go to Subcontractors"}
           >
             Subcontractors
           </button>
@@ -1339,6 +1362,8 @@ disabled={reqLoading}
   </div></div>
 )
 }
+
+
 
 
 
