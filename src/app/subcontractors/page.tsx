@@ -470,13 +470,13 @@ export default function SubcontractorsPage() {
                     <td className="p-2">{s.is_active ? "Yes" : "No"}</td>
                     <td className="p-2">
                       <div className="flex items-center gap-2">
-                        <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" onClick={() => openDocs(s)} title="Docs">
+                        <button className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50" onClick={() => openDocs(s)} title="Docs">
                           Docs
                         </button>
-                        <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" onClick={() => openEdit(s)} title="Edit">
+                        <button className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50" onClick={() => openEdit(s)} title="Edit">
                           Edit
                         </button>
-                        <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" onClick={() => deleteSub(s)} title="Delete">
+                        <button className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50" onClick={() => deleteSub(s)} title="Delete">
                           Delete
                         </button>
                       </div>
@@ -498,7 +498,7 @@ export default function SubcontractorsPage() {
                 <div className="text-sm text-gray-600">{modalTitle}</div>
                 <div className="text-lg font-semibold">{selectedOrg?.name ?? "Organization"}</div>
               </div>
-              <button className="rounded border px-2 py-1 text-sm hover:bg-gray-50" type="button" onClick={() => setOpen(false)} disabled={saving} title="Close">
+              <button className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50" type="button" onClick={() => setOpen(false)} disabled={saving} title="Close">
                 X
               </button>
             </div>
@@ -542,10 +542,10 @@ export default function SubcontractorsPage() {
             </div>
 
             <div className="mt-4 flex items-center justify-end gap-2">
-              <button className="h-10 rounded border px-4 text-sm hover:bg-gray-50 disabled:opacity-50" type="button" onClick={() => setOpen(false)} disabled={saving}>
+              <button className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50" type="button" onClick={() => setOpen(false)} disabled={saving}>
                 Cancel
               </button>
-              <button className="h-10 rounded bg-black px-4 text-sm text-white disabled:opacity-50" type="button" onClick={onSave} disabled={saving}>
+              <button className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50" type="button" onClick={onSave} disabled={saving}>
                 {saving ? "Saving..." : saveLabel}
               </button>
             </div>
@@ -562,7 +562,7 @@ export default function SubcontractorsPage() {
                 <div className="text-sm text-gray-600">Documents</div>
                 <div className="text-lg font-semibold">{docsFor.name}</div>
               </div>
-              <button className="rounded border px-2 py-1 text-sm hover:bg-gray-50" type="button" onClick={() => setDocsOpen(false)} disabled={docsSaving} title="Close">
+              <button className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50" type="button" onClick={() => setDocsOpen(false)} disabled={docsSaving} title="Close">
                 X
               </button>
             </div>
@@ -593,7 +593,7 @@ export default function SubcontractorsPage() {
                 <input className="h-10 rounded border px-3" type="date" value={docExpiresOn} onChange={(e) => setDocExpiresOn(e.target.value)} />
               </div>
 
-              <button className="h-10 rounded bg-black px-4 text-sm text-white disabled:opacity-50" onClick={addDoc} disabled={docsSaving}>
+              <button className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50" onClick={addDoc} disabled={docsSaving}>
                 {docsSaving ? "Adding..." : "Add doc"}
               </button>
 
@@ -631,7 +631,7 @@ export default function SubcontractorsPage() {
                             <div className="flex flex-col gap-2">
                               <form onSubmit={(e) => uploadForDoc(e, docsFor.id, d.id)} className="flex items-center gap-2">
                                 <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.txt" required className="text-xs" />
-                                <button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" type="submit" disabled={uploadingDocId === d.id}>
+                                <button className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50" type="submit" disabled={uploadingDocId === d.id}>
                                   {uploadingDocId === d.id ? "Uploading..." : "Upload/Replace"}
                                 </button>
                               </form>
@@ -671,3 +671,4 @@ export default function SubcontractorsPage() {
     </main>
   )
 }
+
