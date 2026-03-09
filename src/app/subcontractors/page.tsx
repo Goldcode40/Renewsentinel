@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
 
@@ -442,7 +442,7 @@ export default function SubcontractorsPage() {
         </div>
 
         {loading ? (
-          <div className="text-sm text-gray-600">LoadingÃ¢â‚¬Â¦</div>
+          <div className="text-sm text-gray-600">Loading...</div>
         ) : rows.length === 0 ? (
           <div className="text-sm text-gray-600">No subcontractors yet.</div>
         ) : (
@@ -499,7 +499,7 @@ export default function SubcontractorsPage() {
                 <div className="text-lg font-semibold">{selectedOrg?.name ?? "Organization"}</div>
               </div>
               <button className="rounded border px-2 py-1 text-sm hover:bg-gray-50" type="button" onClick={() => setOpen(false)} disabled={saving} title="Close">
-                Ã¢Å“â€¢
+                X
               </button>
             </div>
 
@@ -563,7 +563,7 @@ export default function SubcontractorsPage() {
                 <div className="text-lg font-semibold">{docsFor.name}</div>
               </div>
               <button className="rounded border px-2 py-1 text-sm hover:bg-gray-50" type="button" onClick={() => setDocsOpen(false)} disabled={docsSaving} title="Close">
-                Ã¢Å“â€¢
+                X
               </button>
             </div>
 
@@ -605,7 +605,7 @@ export default function SubcontractorsPage() {
             <div className="mt-4 rounded border">
               <div className="border-b bg-gray-50 px-3 py-2 text-sm font-medium">Docs</div>
               {docsLoading ? (
-                <div className="p-3 text-sm text-gray-600">LoadingÃ¢â‚¬Â¦</div>
+                <div className="p-3 text-sm text-gray-600">LoadingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</div>
               ) : docs.length === 0 ? (
                 <div className="p-3 text-sm text-gray-600">No docs yet.</div>
               ) : (
