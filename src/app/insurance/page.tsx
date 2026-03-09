@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
 
@@ -361,7 +361,7 @@ export default function InsurancePage() {
         </div>
 
         {loading ? (
-          <div className="text-sm text-gray-600">Loading…</div>
+          <div className="text-sm text-gray-600">Loadingâ€¦</div>
         ) : rows.length === 0 ? (
           <div className="text-sm text-gray-600">No policies yet.</div>
         ) : (
@@ -440,7 +440,7 @@ export default function InsurancePage() {
                 <div className="text-sm text-gray-600">{modalTitle}</div>
                 <div className="text-lg font-semibold">{selectedOrg?.name ?? "Organization"}</div>
               </div>
-              <button className="rounded border px-2 py-1 text-sm hover:bg-gray-50" type="button" onClick={() => setOpen(false)} disabled={saving} title="Close">
+              <button className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50" type="button" onClick={() => setOpen(false)} disabled={saving} title="Close">
                 X
               </button>
             </div>
@@ -485,10 +485,10 @@ export default function InsurancePage() {
             </div>
 
             <div className="mt-4 flex items-center justify-end gap-2">
-              <button className="h-10 rounded border px-4 text-sm hover:bg-gray-50 disabled:opacity-50" type="button" onClick={() => setOpen(false)} disabled={saving}>
+              <button className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50" type="button" onClick={() => setOpen(false)} disabled={saving}>
                 Cancel
               </button>
-              <button className="h-10 rounded bg-black px-4 text-sm text-white disabled:opacity-50" type="button" onClick={onSave} disabled={saving}>
+              <button className="inline-flex h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50" type="button" onClick={onSave} disabled={saving}>
                 {saving ? "Saving..." : saveLabel}
               </button>
             </div>
