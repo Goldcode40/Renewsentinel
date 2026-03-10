@@ -256,6 +256,9 @@ const [expiresOn, setExpiresOn] = useState<string>("")
 const [renewalWindowDays, setRenewalWindowDays] = useState<number>(30)
 const [creating, setCreating] = useState(false)
 const searchParams = useSearchParams()
+const [emailExpiries, setEmailExpiries] = useState<any[]>([])
+const [emailExpiriesLoading, setEmailExpiriesLoading] = useState(false)
+const [emailExpiriesErr, setEmailExpiriesErr] = useState<string>("")
 
 
 const selectedOrg = useMemo(() => orgs.find(o => o.id === orgId), [orgs, orgId])
@@ -486,6 +489,27 @@ return
 setItems(json.items ?? [])
 } finally {
 setLoadingItems(false)
+}
+}
+async function loadEmailExpiries(nextOrgId?: string) {
+const oid = nextOrgId ?? orgId
+if (!oid) return
+setEmailExpiriesLoading(true)
+setEmailExpiriesErr("")
+try {
+const res = await fetch(`/api/email-expiries/list?org_id=${oid}&limit=10`, { cache: "no-store" })
+const json = await res.json()
+if (!json?.ok) {
+setEmailExpiriesErr(json?.error ?? "Failed to load email expiry candidates")
+setEmailExpiries([])
+return
+}
+setEmailExpiries(json.items ?? [])
+} catch (e: any) {
+setEmailExpiriesErr(e?.message ?? "Failed to load email expiry candidates")
+setEmailExpiries([])
+} finally {
+setEmailExpiriesLoading(false)
 }
 }
 async function deleteItem(id: string) {
@@ -978,6 +1002,61 @@ title={!isPremium ? "Subscribe to scan email expiry candidates" : "Scan Gmail fo
 Scan email expiries
 </button>
 </div>
+<section className={cx(ui.section, "mt-4")}>
+  <div className={ui.sectionHeader}>
+    <div>
+      <h3 className={ui.title}>Email expiry candidates</h3>
+      <p className={ui.subtitle}>Recent Gmail expiry signals detected for this organization.</p>
+    </div>
+    <button
+      className="h-10 rounded border px-4 disabled:opacity-50"
+      onClick={() => {
+        if (!orgId) return
+        loadEmailExpiries(orgId)
+      }}
+      disabled={!orgId || emailExpiriesLoading || !isPremium}
+      title={!isPremium ? "Subscribe to load email expiry candidates" : "Refresh email expiry candidates"}
+    >
+      {emailExpiriesLoading ? "Loading..." : "Refresh candidates"}
+    </button>
+  </div>
+
+  <div className={ui.sectionBody}>
+    {emailExpiriesErr ? (
+      <div className={ui.error}>{emailExpiriesErr}</div>
+    ) : emailExpiries.length === 0 ? (
+      <div className="text-sm text-slate-500">No email expiry candidates found yet.</div>
+    ) : (
+      <div className="space-y-3">
+        {emailExpiries.map((cand) => (
+          <div key={cand.id} className="rounded-xl border border-slate-200 p-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-slate-900 truncate">
+                  {cand.subject || "(no subject)"}
+                </div>
+                <div className="mt-1 text-xs text-slate-500">
+                  From: {cand.from_email || "-"} | Parsed expiry: {cand.parsed_expiry_date || "none"} | Created: {new Date(cand.created_at).toLocaleString()}
+                </div>
+              </div>
+              <div className="text-xs">
+                {cand.matched_item_id ? (
+                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 font-medium text-emerald-700">
+                    Linked
+                  </span>
+                ) : (
+                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 font-medium text-amber-700">
+                    Unlinked
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</section>
 <div className="flex flex-wrap gap-2 pt-2">
           <button
             className="h-10 rounded border px-4 disabled:opacity-50"
@@ -1403,6 +1482,9 @@ disabled={reqLoading}
     </div>
   )
 }
+
+
+
 
 
 
