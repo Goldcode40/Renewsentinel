@@ -229,13 +229,10 @@ export async function GET(req: Request) {
     drawSummaryRow("Insurance policies", `${policies.length}`)
     drawSummaryRow("Subcontractors", `${subcontractors.length} total / ${subDocs.length} docs`)
     y -= 10
-    drawSummaryRow("Insurance policies", `${policies.length}`)
-    drawSummaryRow("Subcontractors", `${subcontractors.length} total / ${subDocs.length} docs`)
-    y -= 10
     y -= 10
 
     // --- Insurance section ---
-    draw("Insurance Policies", 14, true)
+    drawSectionTitle("Insurance Policies")
     y -= 4
     if (policies.length === 0) {
       draw("None", 11)
@@ -281,7 +278,7 @@ export async function GET(req: Request) {
 
     // --- Subcontractors section (with QR for docs) ---
     y -= 6
-    draw("Subcontractors", 14, true)
+    drawSectionTitle("Subcontractors")
     y -= 4
 
     if (subcontractors.length === 0) {
@@ -329,7 +326,7 @@ export async function GET(req: Request) {
 
     // --- Compliance Items ---
     y -= 4
-    draw("Compliance Items", 14, true)
+    drawSectionTitle("Compliance Items")
     y -= 4
 
     for (const it of items) {
@@ -396,6 +393,7 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
 
 
 
