@@ -966,6 +966,17 @@ title={!isPremium ? "Subscribe to view reminders" : "Open scheduled reminders (J
 >
 View reminders
 </button>
+<button
+className="h-10 rounded border px-4 disabled:opacity-50"
+onClick={() => {
+if (!orgId) return
+window.open(`/api/email-expiries/scan?org_id=${orgId}`, "_blank")
+}}
+disabled={!orgId || !isPremium}
+title={!isPremium ? "Subscribe to scan email expiry candidates" : "Scan Gmail for expiry candidates"}
+>
+Scan email expiries
+</button>
 </div>
 <div className="flex flex-wrap gap-2 pt-2">
           <button
