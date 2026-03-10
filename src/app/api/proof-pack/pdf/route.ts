@@ -1,4 +1,4 @@
-﻿import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
 
 import { requireActiveOrTrial } from "@/lib/billingGate"
 import { PDFDocument, StandardFonts } from "pdf-lib"
@@ -31,7 +31,8 @@ export async function GET(req: Request) {
         { status: 403 }
       )
     }
-// items
+
+// items
     const itemsRes = await supabaseAdmin
       .from("compliance_items")
       .select("id, org_id, type, title, issuer, identifier, expires_on, renewal_window_days, status, created_at, updated_at")
@@ -172,14 +173,36 @@ export async function GET(req: Request) {
       const img = await pdfDoc.embedPng(bytes)
       p.drawImage(img, { x, y: yTop - size, width: size, height: size })
     }
-
     const margin = 40
+    const pageWidth = 612
+    const contentWidth = pageWidth - margin * 2
     let y = 792 - margin
 
-    const draw = (text: string, size = 11, bold = false) => {
-      page.drawText(text, { x: margin, y, size, font: bold ? fontBold : font })
+    const draw = (text: string, size = 11, bold = false, x = margin) => {
+      page.drawText(text, { x, y, size, font: bold ? fontBold : font })
       y -= size + 6
     }
+
+    const drawRule = () => {
+      page.drawLine({
+        start: { x: margin, y },
+        end: { x: margin + contentWidth, y },
+        thickness: 1,
+      })
+      y -= 12
+    }
+
+    const drawSectionTitle = (text: string) => {
+      ensureSpace(120)
+      drawRule()
+      draw(text, 14, true)
+      y -= 2
+    }
+
+    const drawSummaryRow = (label: string, value: string) => {
+      draw(`${label}: ${value}`, 10, false, margin + 10)
+    }
+
     function ensureSpace(minY: number) {
       if (y < minY) {
         y = 792 - margin
@@ -187,14 +210,28 @@ export async function GET(req: Request) {
       }
     }
 
-    draw("RenewSentinel Proof Pack (v0)", 16, true)
-    draw(`Org: ${orgRes.data.name} (${orgRes.data.id})`, 10)
-    draw(`Generated: ${new Date().toISOString()}`, 10)
-    y -= 8
-
-    draw(`Items: ${items.length} (with latest doc: ${Object.keys(latestDocsByItem).length})`, 11, true)
-    draw(`Insurance policies: ${policies.length}`, 11, true)
-    draw(`Subcontractors: ${subcontractors.length} (docs: ${subDocs.length})`, 11, true)
+    // Header border
+    page.drawLine({ start: { x: margin, y: y }, end: { x: margin + contentWidth, y: y }, thickness: 1 })
+    page.drawLine({ start: { x: margin, y: y - 58 }, end: { x: margin + contentWidth, y: y - 58 }, thickness: 1 })
+    page.drawLine({ start: { x: margin, y: y }, end: { x: margin, y: y - 58 }, thickness: 1 })
+    page.drawLine({ start: { x: margin + contentWidth, y: y }, end: { x: margin + contentWidth, y: y - 58 }, thickness: 1 })
+    draw("RenewSentinel Proof Pack", 18, true, margin + 12)
+    draw(`Organization: ${orgRes.data.name}`, 10, false, margin + 12)
+    draw(`Generated: ${new Date().toISOString()}`, 9, false, margin + 12)
+    y -= 6
+    // Summary border
+    page.drawLine({ start: { x: margin, y: y }, end: { x: margin + contentWidth, y: y }, thickness: 1 })
+    page.drawLine({ start: { x: margin, y: y - 64 }, end: { x: margin + contentWidth, y: y - 64 }, thickness: 1 })
+    page.drawLine({ start: { x: margin, y: y }, end: { x: margin, y: y - 64 }, thickness: 1 })
+    page.drawLine({ start: { x: margin + contentWidth, y: y }, end: { x: margin + contentWidth, y: y - 64 }, thickness: 1 })
+    draw("Summary", 12, true, margin + 10)
+    drawSummaryRow("Compliance items", `${items.length} total / ${Object.keys(latestDocsByItem).length} with latest doc`)
+    drawSummaryRow("Insurance policies", `${policies.length}`)
+    drawSummaryRow("Subcontractors", `${subcontractors.length} total / ${subDocs.length} docs`)
+    y -= 10
+    drawSummaryRow("Insurance policies", `${policies.length}`)
+    drawSummaryRow("Subcontractors", `${subcontractors.length} total / ${subDocs.length} docs`)
+    y -= 10
     y -= 10
 
     // --- Insurance section ---
@@ -359,4 +396,6 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
+
 
