@@ -1299,6 +1299,9 @@ disabled={!orgId || creating}
 <span className={`inline-flex min-w-[76px] items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide ${clsStatus(it.status)}`}>
 {it.status.toUpperCase()}
 </span>
+<div className="text-[11px] font-medium text-slate-500">
+{it.status === "green" ? "On track" : it.status === "yellow" ? "Expiring soon" : "Expired"}
+</div>
 <div className="text-sm text-slate-700">
 <span className="text-base font-semibold">{it.days_left}</span> days
 </div>
@@ -1582,6 +1585,7 @@ disabled={reqLoading}
     </div>
   )
 }
+
 
 
 
