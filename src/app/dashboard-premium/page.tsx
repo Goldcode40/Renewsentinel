@@ -704,6 +704,8 @@ useEffect(() => {
     loadRequirements();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reqState, reqTrade]);
+const expiredCount = items.filter((it) => it.days_left < 0 || it.status === "red").length
+const expiringSoonCount = items.filter((it) => it.days_left >= 0 && it.days_left <= 30 && it.status !== "red").length
 return (
     <div className={ui.page}>
       <div className={ui.shell}>
@@ -720,13 +722,13 @@ return (
       {/* KPI STRIP */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
         <div className="rs-card rounded-xl p-6 text-center">
-          <div className="text-sm text-gray-500">Upcoming Renewals</div>
-          <div className="text-3xl font-bold text-green-600 mt-2">{items.length}</div>
+          <div className="text-sm text-gray-500">Expiring Soon</div>
+          <div className="text-3xl font-bold text-amber-600 mt-2">{expiringSoonCount}</div>
         </div>
 
         <div className="rs-card rounded-xl p-6 text-center">
-          <div className="text-sm text-gray-500">Items Tracked</div>
-          <div className="text-3xl font-bold mt-2">{items.length}</div>
+          <div className="text-sm text-gray-500">Expired</div>
+          <div className="text-3xl font-bold text-red-600 mt-2">{expiredCount}</div>
         </div>
         <div className="rs-card rounded-xl p-6">
           <div className="flex h-full flex-col justify-between gap-4">
@@ -1580,6 +1582,9 @@ disabled={reqLoading}
     </div>
   )
 }
+
+
+
 
 
 
