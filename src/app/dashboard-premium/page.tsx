@@ -259,6 +259,8 @@ const searchParams = useSearchParams()
 const [emailExpiries, setEmailExpiries] = useState<any[]>([])
 const [emailExpiriesLoading, setEmailExpiriesLoading] = useState(false)
 const [emailExpiriesErr, setEmailExpiriesErr] = useState<string>("")
+const [emailExpirySelections, setEmailExpirySelections] = useState<Record<string, string>>({})
+const [emailExpiryLinkingId, setEmailExpiryLinkingId] = useState<string>("")
 
 
 const selectedOrg = useMemo(() => orgs.find(o => o.id === orgId), [orgs, orgId])
@@ -510,6 +512,72 @@ setEmailExpiriesErr(e?.message ?? "Failed to load email expiry candidates")
 setEmailExpiries([])
 } finally {
 setEmailExpiriesLoading(false)
+}
+}
+async function linkEmailExpiryToItem(emailExpiryId: string) {
+const complianceItemId = emailExpirySelections[emailExpiryId]
+if (!orgId) return
+if (!complianceItemId) {
+setEmailExpiriesErr("Select a compliance item before linking.")
+return
+}
+try {
+setEmailExpiriesErr("")
+setEmailExpiryLinkingId(emailExpiryId)
+const res = await fetch("/api/email-expiries/link-item", {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({
+org_id: orgId,
+email_expiry_id: emailExpiryId,
+compliance_item_id: complianceItemId,
+confidence: 90,
+}),
+})
+const json = await res.json()
+if (!json?.ok) {
+setEmailExpiriesErr(json?.error ?? "Failed to link email expiry candidate")
+return
+}
+await loadEmailExpiries(orgId)
+await loadItems(orgId, days)
+} catch (e: any) {
+setEmailExpiriesErr(e?.message ?? "Failed to link email expiry candidate")
+} finally {
+setEmailExpiryLinkingId("")
+}
+}
+async function linkEmailExpiryToItem(emailExpiryId: string) {
+const complianceItemId = emailExpirySelections[emailExpiryId]
+if (!orgId) return
+if (!complianceItemId) {
+setEmailExpiriesErr("Select a compliance item before linking.")
+return
+}
+try {
+setEmailExpiriesErr("")
+setEmailExpiryLinkingId(emailExpiryId)
+const res = await fetch("/api/email-expiries/link-item", {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({
+org_id: orgId,
+email_expiry_id: emailExpiryId,
+compliance_item_id: complianceItemId,
+confidence: 90,
+}),
+})
+const json = await res.json()
+if (!json?.ok) {
+setEmailExpiriesErr(json?.error ?? "Failed to link email expiry candidate")
+return
+}
+await loadEmailExpiries(orgId)
+await loadItems(orgId, days)
+} catch (e: any) {
+setEmailExpiriesErr(e?.message ?? "Failed to link email expiry candidate")
+} finally {
+setEmailExpiryLinkingId("")
 }
 }
 async function deleteItem(id: string) {
@@ -1051,6 +1119,36 @@ Scan email expiries
                 )}
               </div>
             </div>
+            {!cand.matched_item_id ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <select
+                  className="h-10 rounded border px-3 text-sm"
+                  value={emailExpirySelections[cand.id] || ""}
+                  onChange={(e) =>
+                    setEmailExpirySelections((prev) => ({
+                      ...prev,
+                      [cand.id]: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Select compliance item...</option>
+                  {items.map((it) => (
+                    <option key={it.id} value={it.id}>
+                      {it.title}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  className="h-10 rounded border px-4 text-sm disabled:opacity-50"
+                  onClick={() => linkEmailExpiryToItem(cand.id)}
+                  disabled={!cand.parsed_expiry_date || !emailExpirySelections[cand.id] || emailExpiryLinkingId === cand.id}
+                  title={!cand.parsed_expiry_date ? "No parsed expiry date to link" : "Link this email expiry candidate to a compliance item"}
+                >
+                  {emailExpiryLinkingId === cand.id ? "Linking..." : "Link to item"}
+                </button>
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
@@ -1482,6 +1580,8 @@ disabled={reqLoading}
     </div>
   )
 }
+
+
 
 
 
