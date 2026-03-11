@@ -1285,7 +1285,7 @@ disabled={!orgId || creating}
 ) : (
 <ul className="space-y-3">
 {items.map((it) => (
-<li key={it.id} className="rounded border p-3">
+<li key={it.id} className="rounded-xl border border-slate-200 bg-white/90 p-4 shadow-sm">
 <div className="flex items-start justify-between gap-3">
 <div>
 <div className="font-medium">{it.title}</div>
@@ -1296,14 +1296,14 @@ disabled={!orgId || creating}
 </div>
 </div>
 <div className="flex flex-col items-end gap-2">
-<span className={`rounded border px-2 py-1 text-xs font-medium ${clsStatus(it.status)}`}>
+<span className={`inline-flex min-w-[76px] items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide ${clsStatus(it.status)}`}>
 {it.status.toUpperCase()}
 </span>
-<div className="text-sm">
-<span className="font-medium">{it.days_left}</span> days
+<div className="text-sm text-slate-700">
+<span className="text-base font-semibold">{it.days_left}</span> days
 </div>
 <button
-className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
 onClick={() => {
 if (confirm("Delete this item?")) deleteItem(it.id)
 }}
@@ -1312,7 +1312,7 @@ title="Delete"
 Delete
 </button>
 <button
-className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
 onClick={() => {
 const nextTitle = prompt("New title:", it.title) ?? ""
 if (!nextTitle.trim()) return
@@ -1338,12 +1338,12 @@ name="file"
 accept=".pdf,.png,.jpg,.jpeg,.txt"
 required
 />
-<button className="rounded border px-2 py-1 text-xs hover:bg-gray-50" type="submit">
+<button className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50" type="submit">
 Upload proof
 </button>
 </form>
 <button
-className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
 onClick={() => {
 if (!orgId) return
 window.open(`/api/items/docs?org_id=${orgId}&item_id=${it.id}`, "_blank")
@@ -1353,7 +1353,7 @@ title="Open item documents (JSON)"
 View docs
 </button>
 <button
-className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
 onClick={() => {
 if (!orgId) return
 window.open(`/api/items/docs/summary?org_id=${orgId}&item_id=${it.id}`, "_blank")
@@ -1363,7 +1363,7 @@ title="Open docs summary (JSON)"
 Docs summary
 </button>
 <button
-className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
 onClick={async () => {
 if (!orgId) return
 const res = await fetch(`/api/items/docs/latest?org_id=${orgId}&item_id=${it.id}`, { cache: "no-store" })
@@ -1380,7 +1380,7 @@ title="Get signed download link for latest document"
 Download latest
 </button>
 <button
-className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
 onClick={async () => {
 if (!orgId) return
 const ok = confirm("Delete the latest document for this item?")
@@ -1501,7 +1501,7 @@ disabled={reqLoading}
     </label>
     <div className="flex items-center gap-2">
   <button
-    className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+    className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
     type="button"
     onClick={() => applyRequirementToForm(r)}
     title="Use this requirement to prefill the create item form"
@@ -1582,6 +1582,7 @@ disabled={reqLoading}
     </div>
   )
 }
+
 
 
 
