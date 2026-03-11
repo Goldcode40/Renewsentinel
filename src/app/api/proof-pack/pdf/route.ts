@@ -224,6 +224,7 @@ export async function GET(req: Request) {
     page.drawLine({ start: { x: margin, y: y - 64 }, end: { x: margin + contentWidth, y: y - 64 }, thickness: 1 })
     page.drawLine({ start: { x: margin, y: y }, end: { x: margin, y: y - 64 }, thickness: 1 })
     page.drawLine({ start: { x: margin + contentWidth, y: y }, end: { x: margin + contentWidth, y: y - 64 }, thickness: 1 })
+    y -= 14
     draw("Summary", 12, true, margin + 10)
     drawSummaryRow("Compliance items", `${items.length} total / ${Object.keys(latestDocsByItem).length} with latest doc`)
     drawSummaryRow("Insurance policies", `${policies.length}`)
@@ -393,6 +394,7 @@ export async function GET(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+
 
 
 
