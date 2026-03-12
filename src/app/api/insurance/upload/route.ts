@@ -1,4 +1,4 @@
-﻿import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
 import { requireActiveOrTrial } from "@/lib/billingGate"
 
 export const runtime = "nodejs"
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     const gate = await requireActiveOrTrial(supabaseAdmin as any, orgId)
     if (!gate.ok) {
       return Response.json(
-        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { ok: false, error: "Upgrade required" },
         { status: 403 }
       )
     }
@@ -65,3 +65,4 @@ export async function POST(req: Request) {
     return Response.json({ ok: false, error: e?.message ?? "unknown error" }, { status: 500 })
   }
 }
+

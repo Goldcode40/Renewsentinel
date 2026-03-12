@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { google } from "googleapis";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireActiveOrTrial } from "@/lib/billingGate";
@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     const gate = await requireActiveOrTrial(supabase as any, orgId);
     if (!gate.ok) {
       return NextResponse.json(
-        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { ok: false, error: "Upgrade required" },
         { status: 403 }
       );
     }
@@ -43,7 +43,7 @@ export async function GET(req: Request) {
       access_type: "offline",
       prompt: "consent",
       scope: scopes,
-      state: orgId, // weâ€™ll use this to attach tokens to the right org later
+      state: orgId, // we’ll use this to attach tokens to the right org later
     });
 
     return NextResponse.json({ ok: true, url: authUrl });
@@ -51,4 +51,5 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 });
   }
 }
+
 

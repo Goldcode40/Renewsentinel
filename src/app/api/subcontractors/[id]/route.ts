@@ -61,7 +61,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   const gate = await requireActiveOrTrial(supabase as any, org_id);
   if (!gate.ok) {
     return NextResponse.json(
-      { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+      { ok: false, error: "Upgrade required" },
       { status: 403 }
     );
   }
@@ -103,7 +103,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   const gate = await requireActiveOrTrial(supabase as any, org_id);
   if (!gate.ok) {
     return NextResponse.json(
-      { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+      { ok: false, error: "Upgrade required" },
       { status: 403 }
     );
   }
@@ -122,3 +122,4 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
   return NextResponse.json({ ok: true });
 }
+

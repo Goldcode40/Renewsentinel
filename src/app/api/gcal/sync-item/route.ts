@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { google } from "googleapis"
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
 import { requireActiveOrTrial } from "@/lib/billingGate"
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     const gate = await requireActiveOrTrial(supabase as any, orgId)
     if (!gate.ok) {
       return NextResponse.json(
-        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { ok: false, error: "Upgrade required" },
         { status: 403 }
       )
     }
@@ -167,3 +167,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: e?.message || "Unknown error" }, { status: 500 })
   }
 }
+

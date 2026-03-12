@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import Stripe from "stripe"
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
 
@@ -92,7 +92,7 @@ export async function POST(req: Request) {
 
       // If it was a subscription checkout, fetch subscription to capture price + period end
       if (subscriptionId) {
-        const sub = await stripe.subscriptions.retrieve(subscriptionId)
+        const sub: any = await stripe.subscriptions.retrieve(subscriptionId)
 
         const priceId =
           (sub.items.data?.[0]?.price?.id as string | undefined) ||
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
     }
 
     if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
-      const sub = event.data.object as Stripe.Subscription
+      const sub: any = event.data.object as Stripe.Subscription
 
       const customerId = typeof sub.customer === "string" ? sub.customer : ""
       const subscriptionId = sub.id
@@ -166,3 +166,5 @@ export async function POST(req: Request) {
     return ok({ ok: false, error: e?.message || String(e) }, 500)
   }
 }
+
+

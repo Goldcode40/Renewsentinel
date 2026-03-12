@@ -64,7 +64,7 @@ export async function GET(req: Request) {
     const gate = await requireActiveOrTrial(supabase as any, orgId);
     if (!gate.ok) {
       return NextResponse.json(
-        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { ok: false, error: "Upgrade required" },
         { status: 403 }
       );
     }
@@ -184,3 +184,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 });
   }
 }
+

@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import Stripe from "stripe"
 
 function isPlaceholder(val?: string) {
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     const successUrl = `${origin}/dashboard-premium?billing=success`
     const cancelUrl = `${origin}/dashboard-premium?billing=cancel`
 
-    const stripe = new Stripe(secretKey)
+    const stripe = new Stripe(secretKey as string)
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -75,3 +75,4 @@ export async function POST(req: Request) {
     )
   }
 }
+

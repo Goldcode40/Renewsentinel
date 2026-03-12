@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireActiveOrTrial } from "@/lib/billingGate";
 
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
     const gate = await requireActiveOrTrial(supabaseAdmin as any, org_id)
     if (!gate.ok) {
       return NextResponse.json(
-        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { ok: false, error: "Upgrade required" },
         { status: 403 }
       )
     }
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
     const gate = await requireActiveOrTrial(supabaseAdmin as any, org_id)
     if (!gate.ok) {
       return NextResponse.json(
-        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { ok: false, error: "Upgrade required" },
         { status: 403 }
       )
     }
@@ -167,3 +167,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e?.message ?? "unknown error" }, { status: 500 });
   }
 }
+

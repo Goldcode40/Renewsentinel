@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import Stripe from "stripe"
 
 function isPlaceholder(val?: string) {
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
       )
     }
 
-    const stripe = new Stripe(secretKey)
+    const stripe = new Stripe(secretKey as string)
     const s = await stripe.checkout.sessions.retrieve(session_id)
 
     return NextResponse.json({
@@ -41,3 +41,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: e?.message ?? "Unknown error" }, { status: 500 })
   }
 }
+

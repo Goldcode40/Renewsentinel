@@ -1,5 +1,6 @@
-﻿import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { requireActiveOrTrial } from "@/lib/billingGate"
 
 export const dynamic = "force-dynamic"
 
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     const gate = await requireActiveOrTrial(sb as any, org_id)
     if (!gate.ok) {
       return NextResponse.json(
-        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { ok: false, error: "Upgrade required" },
         { status: 403 }
       )
     }
@@ -78,3 +79,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: e?.message || "Server error" }, { status: 500 })
   }
 }
+

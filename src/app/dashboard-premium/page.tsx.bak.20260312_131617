@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 type Org = {
   id: string
@@ -255,6 +256,7 @@ const [identifier, setIdentifier] = useState<string>("")
 const [expiresOn, setExpiresOn] = useState<string>("")
 const [renewalWindowDays, setRenewalWindowDays] = useState<number>(30)
 const [creating, setCreating] = useState(false)
+const searchParams = useSearchParams()
 const [emailExpiries, setEmailExpiries] = useState<any[]>([])
 const [emailExpiriesLoading, setEmailExpiriesLoading] = useState(false)
 const [emailExpiriesErr, setEmailExpiriesErr] = useState<string>("")
@@ -266,7 +268,7 @@ const selectedOrg = useMemo(() => orgs.find(o => o.id === orgId), [orgs, orgId])
 
 const billingStatus = String(selectedOrg?.billing_status ?? "").trim().toLowerCase()
 const isPremium = (billingStatus === "active" || billingStatus === "trialing")
-const showUpgrade = !isPremium
+const showUpgrade = (!isPremium) || (searchParams.get("show_upgrade") === "1")
 const DEV_TRIAL_ENABLED = (process.env.NEXT_PUBLIC_ENABLE_DEV_TRIAL === "1")
 async function startTrial() {
   try {
@@ -471,37 +473,6 @@ if (!json?.ok) {
 setErr(json?.error ?? "Failed to load orgs")
 return
 }
-
-if ((json.orgs?.length ?? 0) === 0) {
-  const resCreate = await fetch("/api/org/bootstrap", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      user_id: uid,
-      org_name: "My Organization"
-    }),
-  })
-
-  const created = await resCreate.json()
-  if (!created?.ok) {
-    setErr(created?.error ?? "Failed to create organization")
-    return
-  }
-
-  const resReload = await fetch(`/api/orgs?user_id=${uid}`, { cache: "no-store" })
-  const reloadJson = await resReload.json()
-  if (!reloadJson?.ok) {
-    setErr(reloadJson?.error ?? "Failed to reload orgs")
-    return
-  }
-
-  setOrgs(reloadJson.orgs ?? [])
-  if ((reloadJson.orgs?.length ?? 0) > 0) {
-    setOrgId(reloadJson.orgs[0].id)
-  }
-  return
-}
-
 setOrgs(json.orgs ?? [])
 if (!orgId && (json.orgs?.length ?? 0) > 0) {
 setOrgId(json.orgs[0].id)
@@ -545,6 +516,39 @@ setEmailExpiriesErr(e?.message ?? "Failed to load email expiry candidates")
 setEmailExpiries([])
 } finally {
 setEmailExpiriesLoading(false)
+}
+}
+async function linkEmailExpiryToItem(emailExpiryId: string) {
+const complianceItemId = emailExpirySelections[emailExpiryId]
+if (!orgId) return
+if (!complianceItemId) {
+setEmailExpiriesErr("Select a compliance item before linking.")
+return
+}
+try {
+setEmailExpiriesErr("")
+setEmailExpiryLinkingId(emailExpiryId)
+const res = await fetch("/api/email-expiries/link-item", {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({
+org_id: orgId,
+email_expiry_id: emailExpiryId,
+compliance_item_id: complianceItemId,
+confidence: 90,
+}),
+})
+const json = await res.json()
+if (!json?.ok) {
+setEmailExpiriesErr(json?.error ?? "Failed to link email expiry candidate")
+return
+}
+await loadEmailExpiries(orgId)
+await loadItems(orgId, days)
+} catch (e: any) {
+setEmailExpiriesErr(e?.message ?? "Failed to link email expiry candidate")
+} finally {
+setEmailExpiryLinkingId("")
 }
 }
 async function linkEmailExpiryToItem(emailExpiryId: string) {
@@ -1613,11 +1617,6 @@ disabled={reqLoading}
     </div>
   )
 }
-
-
-
-
-
 
 
 

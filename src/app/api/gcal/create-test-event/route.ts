@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { google } from "googleapis"
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin"
 import { requireActiveOrTrial } from "@/lib/billingGate"
@@ -37,10 +37,10 @@ export async function POST(req: Request) {
   const supabaseAdmin = getSupabaseAdmin()
 
     // HARD GATE: GCAL Create Test Event is premium-only (active subscription OR active trial)
-    const gate = await requireActiveOrTrial(supabaseAdmin as any, fromQuery)
+    const gate = await requireActiveOrTrial(supabaseAdmin as any, orgId)
     if (!gate.ok) {
       return NextResponse.json(
-        { ok: false, error: "Upgrade required", reason: gate.reason, org: gate.org ?? null },
+        { ok: false, error: "Upgrade required" },
         { status: 403 }
       )
     }
@@ -119,3 +119,5 @@ export async function POST(req: Request) {
     end: resp.data.end?.dateTime,
   })
 }
+
+
