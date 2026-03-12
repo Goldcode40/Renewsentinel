@@ -680,25 +680,39 @@ setScheduling(false)
 }
 useEffect(() => {
   let active = true
+
   async function initAuth() {
-    const { data, error } = await supabase.auth.getUser()
+    const { data: sessionData } = await supabase.auth.getSession()
     if (!active) return
-    const uid = data?.user?.id ?? ""
+
+    const sessionUid = sessionData?.session?.user?.id ?? ""
+    if (sessionUid) {
+      setUserId(sessionUid)
+      return
+    }
+
+    const { data: userData, error } = await supabase.auth.getUser()
+    if (!active) return
+
+    const uid = userData?.user?.id ?? ""
     if (error || !uid) {
       window.location.href = "/auth"
       return
     }
+
     setUserId(uid)
   }
+
   initAuth()
+
   const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
     const uid = session?.user?.id ?? ""
     if (!uid) {
-      window.location.href = "/auth"
       return
     }
     setUserId(uid)
   })
+
   return () => {
     active = false
     authListener?.subscription.unsubscribe()
