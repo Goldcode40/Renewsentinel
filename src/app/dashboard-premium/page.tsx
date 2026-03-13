@@ -292,23 +292,38 @@ async function goBilling(mode: "checkout" | "portal") {
   try {
     setErr("")
     if (!orgId) return
-    const endpoint = mode === "portal" ? "/api/billing/portal" : "/api/billing/checkout"
+
+    const endpoint =
+      mode === "portal"
+        ? "/api/billing/portal"
+        : "/api/billing/create-checkout-session"
+
+    const body =
+      mode === "portal"
+        ? { org_id: orgId }
+        : { org_id: orgId, plan: "pro" }
+
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ org_id: orgId }),
+      body: JSON.stringify(body),
     })
+
     const json = await res.json().catch(() => ({} as any))
     const url = json?.url ?? json?.portal_url
+
     if (!res.ok || !url) {
       setErr(json?.error ?? ("Billing request failed (" + res.status + ")"))
       return
     }
+
     window.location.href = url
   } catch (e: any) {
     setErr(e?.message ?? "Billing request failed")
   }
-}// Concierge (Phase 6.2)
+}
+
+// Concierge (Phase 6.2)
 const [concierge, setConcierge] = useState<ConciergePayload>({ request: null, documents: [], viewer_role: "" })
 const [conciergeLoading, setConciergeLoading] = useState<boolean>(false)
 const [conciergeErr, setConciergeErr] = useState<string>("")
@@ -1627,6 +1642,9 @@ disabled={reqLoading}
     </div>
   )
 }
+
+
+
 
 
 
