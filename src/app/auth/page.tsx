@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 
 export default function AuthPage() {
@@ -109,10 +110,20 @@ export default function AuthPage() {
 
         {message ? <p className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-2 text-sm text-emerald-800">{message}</p> : null}
         {error ? <p className="mt-4 rounded-lg border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-sm text-rose-800">{error}</p> : null}
+
+        <div className="mt-6 border-t border-slate-200 pt-4 text-center text-xs text-slate-500">
+          <p>
+            By continuing, you agree to the{" "}
+            <Link href="/terms" className="underline hover:text-slate-700">Terms</Link>,{" "}
+            <Link href="/privacy" className="underline hover:text-slate-700">Privacy Policy</Link>, and{" "}
+            <Link href="/disclaimer" className="underline hover:text-slate-700">Disclaimer</Link>.
+          </p>
+        </div>
       </div>
     </main>
   )
 }
+
 
 
 
