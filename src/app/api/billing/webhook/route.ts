@@ -108,6 +108,71 @@ export async function POST(req: Request) {
       return ok({ ok: true, handled: event.type, org_id: orgId })
     }
 
+    if (event.type === "invoice.paid") {
+      const invoice: any = event.data.object as Stripe.Invoice
+
+      const customerId = typeof invoice.customer === "string" ? invoice.customer : ""
+      const subscriptionId =
+        typeof invoice.subscription === "string" ? invoice.subscription : ""
+
+      if (!customerId) {
+        return ok({ ok: true, handled: event.type, note: "invoice.paid missing customer id" })
+      }
+
+      const patch: any = {
+        billing_status: "active",
+        stripe_customer_id: customerId || null,
+      }
+
+      if (subscriptionId) {
+        patch.stripe_subscription_id = subscriptionId
+
+        try {
+          const sub: any = await stripe.subscriptions.retrieve(subscriptionId)
+
+          const priceId =
+            (sub.items.data?.[0]?.price?.id as string | undefined) ||
+            (sub.items.data?.[0]?.plan?.id as string | undefined)
+
+          if (priceId) patch.stripe_price_id = priceId
+          if (sub.current_period_end) {
+            patch.current_period_end = new Date(sub.current_period_end * 1000).toISOString()
+          }
+        } catch {
+          // keep invoice.paid resilient even if subscription lookup fails
+        }
+      }
+
+      const found = await findOrgIdsByCustomer(customerId)
+      if (found.error) return ok({ ok: false, where: "org lookup (invoice.paid)", error: found.error }, 500)
+
+      const orgIds = (found.data || []).map((r: any) => r.id)
+
+      if (orgIds.length === 0) {
+        return ok({
+          ok: true,
+          handled: event.type,
+          note: "no org matched stripe_customer_id; not updating",
+          stripe_customer_id: customerId,
+        })
+      }
+
+      if (orgIds.length > 1) {
+        return ok({
+          ok: true,
+          handled: event.type,
+          warning: "multiple orgs matched stripe_customer_id; not updating",
+          stripe_customer_id: customerId,
+          org_ids: orgIds,
+        })
+      }
+
+      const upd = await updateOrgById(orgIds[0], patch)
+      if (upd.error) return ok({ ok: false, where: "org update (invoice.paid)", error: upd.error }, 500)
+
+      return ok({ ok: true, handled: event.type, org_id: orgIds[0] })
+    }
+
     if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
       const sub: any = event.data.object as Stripe.Subscription
 
@@ -166,5 +231,6 @@ export async function POST(req: Request) {
     return ok({ ok: false, error: e?.message || String(e) }, 500)
   }
 }
+
 
 
