@@ -1064,7 +1064,7 @@ onChange={(e) => setOrgId(e.target.value)}
     <div className="flex gap-2">
       <button
         className="h-10 rounded bg-blue-600 text-white px-4 text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
-        onClick={() => (DEV_TRIAL_ENABLED ? startTrial() : goBilling("checkout"))}
+        onClick={() => goBilling("checkout")}
         disabled={!orgId}
         title="Start subscription"
       >
@@ -1642,6 +1642,7 @@ disabled={reqLoading}
     </div>
   )
 }
+
 
 
 
