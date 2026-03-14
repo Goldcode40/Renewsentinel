@@ -288,7 +288,7 @@ async function startTrial() {
   }
 }
 
-async function goBilling(mode: "checkout" | "portal") {
+async function goBilling(mode: "checkout" | "portal", plan: "starter" | "pro" = "pro") {
   try {
     setErr("")
     if (!orgId) return
@@ -301,7 +301,7 @@ async function goBilling(mode: "checkout" | "portal") {
     const body =
       mode === "portal"
         ? { org_id: orgId }
-        : { org_id: orgId, plan: "pro" }
+        : { org_id: orgId, plan }
 
     const res = await fetch(endpoint, {
       method: "POST",
@@ -1061,14 +1061,22 @@ onChange={(e) => setOrgId(e.target.value)}
         Upgrade to automate reminders, export proof packs, and unlock insurance & subcontractor tracking.
       </div>
     </div>
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
+      <button
+        className="h-10 rounded bg-white text-blue-700 border border-blue-300 px-4 text-sm font-semibold hover:bg-blue-100 disabled:opacity-50"
+        onClick={() => goBilling("checkout", "starter")}
+        disabled={!orgId}
+        title="Start Starter plan checkout"
+      >
+        Starter - $79
+      </button>
       <button
         className="h-10 rounded bg-blue-600 text-white px-4 text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
-        onClick={() => goBilling("checkout")}
+        onClick={() => goBilling("checkout", "pro")}
         disabled={!orgId}
-        title="Start subscription"
+        title="Start Pro plan checkout"
       >
-        Start free trial
+        Pro - $149
       </button>
       <button
         className="h-10 rounded border border-blue-300 bg-white px-4 text-sm font-medium hover:bg-blue-100 disabled:opacity-50"
@@ -1642,6 +1650,7 @@ disabled={reqLoading}
     </div>
   )
 }
+
 
 
 
