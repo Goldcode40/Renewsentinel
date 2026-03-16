@@ -835,7 +835,7 @@ return (
       </div>
 
 {/* Concierge (Phase 6.2) */}
-<section className={cx(ui.section, "space-y-4 overflow-hidden")}>
+<section className={cx(ui.section, "space-y-4 overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm")}>
   <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 md:flex-row md:items-start md:justify-between">
     <div className="max-w-2xl">
       <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-slate-600">
@@ -1650,6 +1650,7 @@ disabled={reqLoading}
     </div>
   )
 }
+
 
 
 
