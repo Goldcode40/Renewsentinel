@@ -71,8 +71,8 @@ const ui = {
   page: "min-h-screen bg-slate-50 text-slate-900",
   shell: "w-full max-w-[1600px] mx-auto px-4 py-6 md:px-6 xl:px-10 2xl:px-12",
   section: "rounded-[10px] border border-[#E5E7EB] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]",
-  sectionHeader: "flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4",
-  sectionBody: "p-5",
+  sectionHeader: "flex items-center justify-between gap-3 border-b border-[#E5E7EB] px-6 py-5",
+  sectionBody: "p-6",
   title: "text-lg font-semibold tracking-tight text-slate-900",
   subtitle: "text-sm text-slate-600",
   grid: "grid gap-4",
@@ -889,7 +889,7 @@ return (
   ) : (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Intake / Submit */}
-      <div className="space-y-3">
+      <div className="space-y-4 rounded-[10px] border border-[#E5E7EB] bg-slate-50/60 p-5">
         <div className="text-sm font-semibold">1) Submit setup request</div>
         <div className="text-sm text-gray-600">
           Tell us anything special. We'll use your org profile defaults:
@@ -920,7 +920,7 @@ return (
       </div>
 
       {/* Upload + Docs list */}
-      <div className="space-y-3">
+      <div className="space-y-4 rounded-[10px] border border-[#E5E7EB] bg-slate-50/60 p-5">
         <div className="text-sm font-semibold">2) Upload documents</div>
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
@@ -1029,8 +1029,8 @@ return (
           </div>
         </div>
       ) : null}
-<section className={cx(ui.section, "space-y-5")}>
-<div className="flex flex-col gap-3 border-b border-slate-200 pb-4 md:flex-row md:items-end md:justify-between">
+<section className={cx(ui.section, "space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm")}>
+<div className="flex flex-col gap-4 rounded-[10px] border border-[#E5E7EB] bg-slate-50/60 p-5 md:flex-row md:items-end md:justify-between">
 <div className="flex flex-col gap-1">
 <label className="text-sm font-medium">Organization</label>
 <select
@@ -1650,6 +1650,11 @@ disabled={reqLoading}
     </div>
   )
 }
+
+
+
+
+
 
 
 
