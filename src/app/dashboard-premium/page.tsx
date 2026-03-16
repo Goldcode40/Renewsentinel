@@ -70,7 +70,7 @@ function cx(...parts: Array<string | false | null | undefined>) {
 const ui = {
   page: "min-h-screen bg-slate-50 text-slate-900",
   shell: "w-full max-w-[1600px] mx-auto px-4 py-6 md:px-6 xl:px-10 2xl:px-12",
-  section: "rounded-2xl border border-slate-200 bg-white shadow-sm",
+  section: "rounded-[10px] border border-[#E5E7EB] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]",
   sectionHeader: "flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4",
   sectionBody: "p-5",
   title: "text-lg font-semibold tracking-tight text-slate-900",
@@ -1650,6 +1650,7 @@ disabled={reqLoading}
     </div>
   )
 }
+
 
 
 
