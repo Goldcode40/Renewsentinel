@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
+import { FileText, Mail, Settings, ShieldCheck } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 type Org = {
   id: string
@@ -907,6 +908,82 @@ return (
         </div>
       </div>
 
+
+      <section className={cx(ui.section, "p-6 shadow-sm transition")}>
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Recent Activity</h2>
+            <p className="text-sm text-slate-600">Live signals that make the dashboard feel active and trustworthy.</p>
+          </div>
+          <div className="text-xs text-slate-500">Updated from your current org state</div>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+              <FileText size={16} />
+              Tracked renewals
+            </div>
+            <div className="mt-1 text-sm text-slate-600">
+              {items.length > 0
+                ? `${items.length} compliance item${items.length === 1 ? "" : "s"} currently tracked.`
+                : "No renewals tracked yet. Add your first item to start tracking deadlines and avoid surprises."}
+            </div>
+            {items.length === 0 ? (
+              <button
+                type="button"
+                className="mt-3 inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                onClick={() => {
+                  const el = document.getElementById("create-compliance-item")
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
+                }}
+                title="Jump to create your first tracked renewal"
+              >
+                + Add first renewal
+              </button>
+            ) : null}
+
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+              <Mail size={16} />
+              Email expiry signals
+            </div>
+            <div className="mt-1 text-sm text-slate-600">
+              {emailExpiries.length > 0
+                ? `${emailExpiries.length} expiry candidate${emailExpiries.length === 1 ? "" : "s"} detected from Gmail.`
+                : "No email expiry candidates detected yet."}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+              <Settings size={16} />
+              Concierge setup
+            </div>
+            <div className="mt-1 text-sm text-slate-600">
+              {concierge.request?.status
+                ? `Setup request is ${concierge.request.status.replace("_", " ")}.`
+                : "No concierge request submitted yet."}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 shadow-sm transition hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+              <ShieldCheck size={16} className="text-blue-600" />
+              <span className="text-blue-700">Proof Pack exports</span>
+            </div>
+            <div className="mt-1 text-sm text-slate-600">
+              {isPremium
+                ? "Audit-ready export is unlocked for this organization."
+                : "Upgrade or start trial to unlock audit-ready exports."}
+            </div>
+          </div>
+        </div>
+      </section>
 {/* Concierge (Phase 6.2) */}
 <section className={cx(ui.section, "space-y-4 overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm")}>
   <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 md:flex-row md:items-start md:justify-between">
@@ -1736,6 +1813,11 @@ disabled={reqLoading}
     </div>
   )
 }
+
+
+
+
+
 
 
 
