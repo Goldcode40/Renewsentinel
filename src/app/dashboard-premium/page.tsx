@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useMemo, useState } from "react"
+import Image from "next/image"
 import { supabase } from "@/lib/supabase"
 type Org = {
   id: string
@@ -767,8 +768,21 @@ return (
     <div className={ui.page}>
       <div className={ui.shell}>
         <main className="space-y-6">
-<div className="rs-card p-8 space-y-4 mb-6">
+<div className="mb-6 space-y-6 rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
   <div className="flex flex-col gap-2">
+  <div className="flex items-center gap-3">
+    <Image
+      src="/branding/renew-sentinel-logo-trimmed.png"
+      alt="Renew Sentinel logo"
+      width={420}
+      height={84}
+      className="h-12 w-auto object-contain"
+      priority
+    />
+    <span className="text-base font-semibold tracking-tight text-slate-900">
+      Renew Sentinel
+    </span>
+  </div>
     <h1 className="text-4xl font-bold tracking-tight">
       Never Get Surprised Again
     </h1>
@@ -778,14 +792,14 @@ return (
   </div>
       {/* KPI STRIP */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-        <div className="rs-card rounded-xl p-6 text-center">
+        <div className="rs-card rounded-xl p-8 text-center shadow-sm">
           <div className="text-sm text-gray-500">Expiring Soon</div>
-          <div className="text-3xl font-bold text-amber-600 mt-2">{expiringSoonCount}</div>
+          <div className="text-4xl font-bold text-amber-600 mt-2">{expiringSoonCount}</div>
         </div>
 
-        <div className="rs-card rounded-xl p-6 text-center">
+        <div className="rs-card rounded-xl p-8 text-center shadow-sm">
           <div className="text-sm text-gray-500">Expired</div>
-          <div className="text-3xl font-bold text-red-600 mt-2">{expiredCount}</div>
+          <div className="text-4xl font-bold text-red-600 mt-2">{expiredCount}</div>
         </div>
         <div className="rs-card rounded-xl p-6">
           <div className="flex h-full flex-col justify-between gap-4">
@@ -800,6 +814,19 @@ return (
             </div>
 
             <div className="flex flex-col gap-2">
+  <div className="flex items-center gap-3">
+    <Image
+      src="/branding/renew-sentinel-logo-trimmed.png"
+      alt="Renew Sentinel logo"
+      width={420}
+      height={84}
+      className="h-12 w-auto object-contain"
+      priority
+    />
+    <span className="text-base font-semibold tracking-tight text-slate-900">
+      Renew Sentinel
+    </span>
+  </div>
               <button
                 className={cx(ui.buttonPrimary, "w-full")}
                 onClick={() => {
@@ -1001,6 +1028,19 @@ return (
   </div>
 </div>
 <div className="flex flex-col gap-2">
+  <div className="flex items-center gap-3">
+    <Image
+      src="/branding/renew-sentinel-logo-trimmed.png"
+      alt="Renew Sentinel logo"
+      width={420}
+      height={84}
+      className="h-12 w-auto object-contain"
+      priority
+    />
+    <span className="text-base font-semibold tracking-tight text-slate-900">
+      Renew Sentinel
+    </span>
+  </div>
 
 </div>
 {err ? (
@@ -1650,6 +1690,14 @@ disabled={reqLoading}
     </div>
   )
 }
+
+
+
+
+
+
+
+
 
 
 
