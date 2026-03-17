@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
+import { FileText, Mail, Settings, ShieldCheck } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 type Org = {
   id: string
@@ -769,42 +770,88 @@ return (
       <div className={ui.shell}>
         <main className="space-y-6">
 <div className="mb-6 space-y-6 rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-  <div className="flex flex-col gap-2">
-  <div className="flex items-center gap-3">
-    <Image
-      src="/branding/renew-sentinel-logo-trimmed.png"
-      alt="Renew Sentinel logo"
-      width={420}
-      height={84}
-      className="h-12 w-auto object-contain"
-      priority
-    />
-    <span className="text-base font-semibold tracking-tight text-slate-900">
-      Renew Sentinel
-    </span>
-  </div>
-    <h1 className="text-4xl font-bold tracking-tight">
-      Never Get Surprised Again
-    </h1>
-    <p className="text-lg text-gray-600">
-      See renewals before they hit. Export proof packs in one click.
-    </p>
+  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3">
+        <Image
+          src="/branding/renew-sentinel-logo-trimmed.png"
+          alt="Renew Sentinel logo"
+          width={420}
+          height={84}
+          className="h-12 w-auto object-contain"
+          priority
+        />
+        <span className="text-base font-semibold tracking-tight text-slate-900">
+          Renew Sentinel
+        </span>
+      </div>
+      <h1 className="text-4xl font-bold tracking-tight">
+        Never Get Surprised Again
+      </h1>
+      <p className="text-lg text-gray-600">
+        See renewals before they hit. Export proof packs in one click.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      className={cx(ui.buttonPrimary, "w-full md:w-auto")}
+      onClick={() => {
+        const el = document.getElementById("create-compliance-item")
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
+      }}
+      title="Jump to create a new tracked renewal"
+    >
+      + Track Renewal
+    </button>
   </div>
       {/* KPI STRIP */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+      <div className="grid grid-cols-1 gap-6 mt-6 md:grid-cols-2 xl:grid-cols-4">
         <div className="rs-card rounded-xl p-8 text-center shadow-sm">
           <div className="text-sm text-gray-500">Expiring Soon</div>
           <div className="text-4xl font-bold text-amber-600 mt-2">{expiringSoonCount}</div>
+          <div className="mt-2 text-xs text-gray-500">Items inside your active renewal window.</div>
         </div>
 
         <div className="rs-card rounded-xl p-8 text-center shadow-sm">
           <div className="text-sm text-gray-500">Expired</div>
           <div className="text-4xl font-bold text-red-600 mt-2">{expiredCount}</div>
+          <div className="mt-2 text-xs text-gray-500">Items already past renewal date.</div>
         </div>
+
+        <div className="rs-card rounded-xl p-8 text-center shadow-sm">
+          <div className="text-sm text-gray-500">Compliance Health</div>
+          <div
+            className={cx(
+              "mt-2 text-4xl font-bold",
+              expiredCount > 0
+                ? "text-red-600"
+                : expiringSoonCount > 0
+                  ? "text-amber-600"
+                  : "text-emerald-600"
+            )}
+          >
+            {items.length === 0
+              ? "100%"
+              : `${Math.max(0, Math.round(((items.length - expiredCount - expiringSoonCount) / items.length) * 100))}%`}
+          </div>
+          <div className="mt-2 text-xs text-gray-500">
+            {items.length === 0
+              ? "No renewals tracked yet."
+              : expiredCount > 0
+                ? `${expiredCount} item${expiredCount === 1 ? "" : "s"} expired.`
+                : expiringSoonCount > 0
+                  ? `${expiringSoonCount} item${expiringSoonCount === 1 ? "" : "s"} expiring soon.`
+                  : "All tracked items look healthy."}
+          </div>
+        </div>
+
         <div className="rs-card rounded-xl p-6">
           <div className="flex h-full flex-col justify-between gap-4">
             <div className="text-center">
-              <div className="text-sm text-gray-500">Proof Pack</div>
+              <div className="text-sm text-gray-500">Proof Pack Export</div>
               <div className="mt-2 text-base font-semibold text-slate-900">
                 {isPremium ? "Audit-ready export" : "Premium export feature"}
               </div>
@@ -814,19 +861,19 @@ return (
             </div>
 
             <div className="flex flex-col gap-2">
-  <div className="flex items-center gap-3">
-    <Image
-      src="/branding/renew-sentinel-logo-trimmed.png"
-      alt="Renew Sentinel logo"
-      width={420}
-      height={84}
-      className="h-12 w-auto object-contain"
-      priority
-    />
-    <span className="text-base font-semibold tracking-tight text-slate-900">
-      Renew Sentinel
-    </span>
-  </div>
+              <div className="flex items-center gap-3">
+                <Image
+                  src="/branding/renew-sentinel-logo-trimmed.png"
+                  alt="Renew Sentinel logo"
+                  width={420}
+                  height={84}
+                  className="h-12 w-auto object-contain"
+                  priority
+                />
+                <span className="text-base font-semibold tracking-tight text-slate-900">
+                  Renew Sentinel
+                </span>
+              </div>
               <button
                 className={cx(ui.buttonPrimary, "w-full")}
                 onClick={() => {
@@ -861,6 +908,82 @@ return (
         </div>
       </div>
 
+
+      <section className={cx(ui.section, "p-6 shadow-sm transition")}>
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Recent Activity</h2>
+            <p className="text-sm text-slate-600">Live signals that make the dashboard feel active and trustworthy.</p>
+          </div>
+          <div className="text-xs text-slate-500">Updated from your current org state</div>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+              <FileText size={16} />
+              Tracked renewals
+            </div>
+            <div className="mt-1 text-sm text-slate-600">
+              {items.length > 0
+                ? `${items.length} compliance item${items.length === 1 ? "" : "s"} currently tracked.`
+                : "No renewals tracked yet. Add your first item to start tracking deadlines and avoid surprises."}
+            </div>
+            {items.length === 0 ? (
+              <button
+                type="button"
+                className="mt-3 inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                onClick={() => {
+                  const el = document.getElementById("create-compliance-item")
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
+                }}
+                title="Jump to create your first tracked renewal"
+              >
+                + Track your first renewal
+              </button>
+            ) : null}
+
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+              <Mail size={16} />
+              Email expiry signals
+            </div>
+            <div className="mt-1 text-sm text-slate-600">
+              {emailExpiries.length > 0
+                ? `${emailExpiries.length} expiry candidate${emailExpiries.length === 1 ? "" : "s"} detected from Gmail.`
+                : "No email expiry candidates detected yet."}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+              <Settings size={16} />
+              Concierge setup
+            </div>
+            <div className="mt-1 text-sm text-slate-600">
+              {concierge.request?.status
+                ? `Setup request is ${concierge.request.status.replace("_", " ")}.`
+                : "No concierge request submitted yet."}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 shadow-sm transition hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+              <ShieldCheck size={16} className="text-blue-600" />
+              <span className="text-blue-700">Proof Pack exports</span>
+            </div>
+            <div className="mt-1 text-sm text-slate-600">
+              {isPremium
+                ? "Audit-ready export is unlocked for this organization."
+                : "Upgrade or start trial to unlock audit-ready exports."}
+            </div>
+          </div>
+        </div>
+      </section>
 {/* Concierge (Phase 6.2) */}
 <section className={cx(ui.section, "space-y-4 overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm")}>
   <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 md:flex-row md:items-start md:justify-between">
@@ -1299,7 +1422,7 @@ Scan email expiries
 </section>
 <section className="mt-6 grid gap-6 lg:grid-cols-3">
 <div className={cx(ui.section, "lg:col-span-2 space-y-4")}>
-<h2 className="text-lg font-semibold">Create compliance item</h2>
+<h2 id="create-compliance-item" className="text-lg font-semibold">Create compliance item</h2>
 <form className="space-y-3" onSubmit={createItem}>
 <div className="grid grid-cols-1 gap-3">
 <div className="flex flex-col gap-1">
@@ -1690,6 +1813,13 @@ disabled={reqLoading}
     </div>
   )
 }
+
+
+
+
+
+
+
 
 
 
