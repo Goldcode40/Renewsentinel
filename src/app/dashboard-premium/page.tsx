@@ -769,26 +769,42 @@ return (
       <div className={ui.shell}>
         <main className="space-y-6">
 <div className="mb-6 space-y-6 rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-  <div className="flex flex-col gap-2">
-  <div className="flex items-center gap-3">
-    <Image
-      src="/branding/renew-sentinel-logo-trimmed.png"
-      alt="Renew Sentinel logo"
-      width={420}
-      height={84}
-      className="h-12 w-auto object-contain"
-      priority
-    />
-    <span className="text-base font-semibold tracking-tight text-slate-900">
-      Renew Sentinel
-    </span>
-  </div>
-    <h1 className="text-4xl font-bold tracking-tight">
-      Never Get Surprised Again
-    </h1>
-    <p className="text-lg text-gray-600">
-      See renewals before they hit. Export proof packs in one click.
-    </p>
+  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3">
+        <Image
+          src="/branding/renew-sentinel-logo-trimmed.png"
+          alt="Renew Sentinel logo"
+          width={420}
+          height={84}
+          className="h-12 w-auto object-contain"
+          priority
+        />
+        <span className="text-base font-semibold tracking-tight text-slate-900">
+          Renew Sentinel
+        </span>
+      </div>
+      <h1 className="text-4xl font-bold tracking-tight">
+        Never Get Surprised Again
+      </h1>
+      <p className="text-lg text-gray-600">
+        See renewals before they hit. Export proof packs in one click.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      className={cx(ui.buttonPrimary, "w-full md:w-auto")}
+      onClick={() => {
+        const el = document.getElementById("create-compliance-item")
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
+      }}
+      title="Jump to create a new tracked renewal"
+    >
+      + Track Renewal
+    </button>
   </div>
       {/* KPI STRIP */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
@@ -1299,7 +1315,7 @@ Scan email expiries
 </section>
 <section className="mt-6 grid gap-6 lg:grid-cols-3">
 <div className={cx(ui.section, "lg:col-span-2 space-y-4")}>
-<h2 className="text-lg font-semibold">Create compliance item</h2>
+<h2 id="create-compliance-item" className="text-lg font-semibold">Create compliance item</h2>
 <form className="space-y-3" onSubmit={createItem}>
 <div className="grid grid-cols-1 gap-3">
 <div className="flex flex-col gap-1">
@@ -1690,6 +1706,7 @@ disabled={reqLoading}
     </div>
   )
 }
+
 
 
 
