@@ -941,7 +941,7 @@ return (
                 }}
                 title="Jump to create your first tracked renewal"
               >
-                + Add first renewal
+                + Track your first renewal
               </button>
             ) : null}
 
@@ -1813,6 +1813,7 @@ disabled={reqLoading}
     </div>
   )
 }
+
 
 
 
