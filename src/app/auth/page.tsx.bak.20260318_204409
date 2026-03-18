@@ -51,7 +51,7 @@ export default function AuthPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold">RenewSentinel</h1>
           <p className="mt-2 text-sm text-slate-700">
-            Stop Missing Renewals — Get Alerts Before They Cost You Jobs`n<p className="mt-2 text-sm text-slate-500">Trusted by contractors to prevent costly compliance lapses</p>`n<p className="mt-1 text-sm text-slate-500">Track licenses, insurance, and permits in one place — never miss a deadline again</p>
+            Stop Missing Renewals — Get Alerts Before They Cost You Jobs`n<p className="mt-2 text-sm text-slate-500">Trusted by contractors to prevent costly compliance lapses</p>
           </p>
         </div>
 
@@ -127,7 +127,6 @@ export default function AuthPage() {
     </main>
   )
 }
-
 
 
 
