@@ -1,9 +1,11 @@
+"use client"
+
 declare global {
   interface Window {
     gtag?: (...args: any[]) => void;
   }
 }
-"use client"
+
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import { FileText, Mail, Settings, ShieldCheck } from "lucide-react"
@@ -1944,6 +1946,10 @@ disabled={reqLoading}
     </div>
   )
 }
+
+
+
+
 
 
 
