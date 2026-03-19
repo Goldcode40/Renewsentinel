@@ -1,3 +1,8 @@
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+  }
+}
 "use client"
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
@@ -1939,6 +1944,7 @@ disabled={reqLoading}
     </div>
   )
 }
+
 
 
 
