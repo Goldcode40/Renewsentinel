@@ -139,14 +139,7 @@ setIdentifier("");
     setApplySaving(true);
     setReqError("");
     try {
-      if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
-const res = await fetch("/api/requirements/apply", {
+      const res = await fetch("/api/requirements/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -234,13 +227,6 @@ const qs = new URLSearchParams({
 state: reqState,
 trade: reqTrade,
 });
-if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
 const res = await fetch(`/api/requirements?${qs.toString()}`);
 const json = await res.json();
 if (!res.ok) {
@@ -295,14 +281,7 @@ async function startTrial() {
   try {
     setErr("")
     if (!orgId) return
-    if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
-const res = await fetch("/api/dev/start-trial", {
+    const res = await fetch("/api/dev/start-trial", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ org_id: orgId, days: 14 }),
@@ -333,14 +312,7 @@ async function goBilling(mode: "checkout" | "portal", plan: "starter" | "pro" = 
         ? { org_id: orgId }
         : { org_id: orgId, plan }
 
-    if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
-const res = await fetch(endpoint, {
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -372,14 +344,7 @@ async function openConciergeDoc(docId: string) {
   setConciergeErr("")
   try {
     const qs = new URLSearchParams({ org_id: orgId, doc_id: docId, expires: "600" })
-    if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
-const res = await fetch(`/api/concierge/doc-url?${qs.toString()}`, { cache: "no-store" })
+    const res = await fetch(`/api/concierge/doc-url?${qs.toString()}`, { cache: "no-store" })
     const json = await res.json()
     if (!res.ok || !json?.ok || !json?.url) {
       setConciergeErr(json?.error ?? "Failed to get download link")
@@ -406,14 +371,7 @@ async function loadConcierge(oid?: string) {
   try {
     if (!userId) return
     const qs = new URLSearchParams({ org_id: useOrg, user_id: userId })
-    if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
-const res = await fetch(`/api/concierge?${qs.toString()}`, { cache: "no-store" })
+    const res = await fetch(`/api/concierge?${qs.toString()}`, { cache: "no-store" })
     const json = await res.json()
     if (!res.ok) {
       setConciergeErr(json?.error ?? "Failed to load concierge")
@@ -437,14 +395,7 @@ async function submitConcierge() {
   if (!orgId) return
   setConciergeErr("")
   try {
-    if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
-const res = await fetch("/api/concierge", {
+    const res = await fetch("/api/concierge", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -479,14 +430,7 @@ async function deleteConciergeDoc(docId: string) {
   if (!orgId) return
   try {
     setConciergeErr("")
-    if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
-const res = await fetch("/api/concierge/admin", {
+    const res = await fetch("/api/concierge/admin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "delete_doc", org_id: orgId, doc_id: docId }),
@@ -509,14 +453,7 @@ const res = await fetch("/api/concierge/admin", {
     fd.append("doc_type", conciergeDocType)
     fd.append("file", file)
 
-    if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
-const res = await fetch("/api/concierge/upload", { method: "POST", body: fd })
+    const res = await fetch("/api/concierge/upload", { method: "POST", body: fd })
     const json = await res.json()
     if (!res.ok || !json?.ok) {
       setConciergeErr(json?.error ?? "Upload failed")
@@ -552,13 +489,6 @@ async function loadOrgs(nextUserId?: string) {
 const uid = nextUserId ?? userId
 if (!uid) return
 setErr("")
-if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
 const res = await fetch(`/api/orgs?user_id=${uid}`, { cache: "no-store" })
 const json = await res.json()
 if (!json?.ok) {
@@ -608,13 +538,6 @@ if (!oid) return
 setLoadingItems(true)
 setErr("")
 try {
-if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
 const res = await fetch(`/api/items/next?org_id=${oid}&days=${d}`, { cache: "no-store" })
 const json = await res.json()
 if (!json?.ok) {
@@ -633,13 +556,6 @@ if (!oid) return
 setEmailExpiriesLoading(true)
 setEmailExpiriesErr("")
 try {
-if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
 const res = await fetch(`/api/email-expiries/list?org_id=${oid}&limit=10`, { cache: "no-store" })
 const json = await res.json()
 if (!json?.ok) {
@@ -665,13 +581,6 @@ return
 try {
 setEmailExpiriesErr("")
 setEmailExpiryLinkingId(emailExpiryId)
-if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
 const res = await fetch("/api/email-expiries/link-item", {
 method: "POST",
 headers: { "Content-Type": "application/json" },
@@ -699,13 +608,6 @@ async function deleteItem(id: string) {
 try {
 setErr("")
 if (!orgId) return
-if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
 const res = await fetch(`/api/items/delete`, {
 method: "DELETE",
 headers: { "Content-Type": "application/json" },
@@ -725,13 +627,6 @@ async function updateItem(id: string, patch: { title?: string; expires_on?: stri
 try {
 setErr("")
 if (!orgId) return
-if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
 const res = await fetch(`/api/items/update`, {
 method: "PATCH",
 headers: { "Content-Type": "application/json" },
@@ -755,13 +650,6 @@ if (!expiresOn.trim()) return setErr("Expires on is required")
 setCreating(true)
 setErr("")
 try {
-if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
 const res = await fetch("/api/items/create", {
 method: "POST",
 headers: { "Content-Type": "application/json" },
@@ -797,13 +685,6 @@ setErr("")
 setLastScheduled(null)
 if (!orgId) return
 setScheduling(true)
-if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
 const res = await fetch("/api/reminders/schedule", {
 method: "POST",
 headers: { "Content-Type": "application/json" },
@@ -1723,13 +1604,6 @@ Docs summary
 className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
 onClick={async () => {
 if (!orgId) return
-if (typeof window !== 'undefined' && window.gtag) {
-  window.gtag('event', 'checkout_started', {
-    plan: plan,
-    mode: mode
-  });
-}
-
 const res = await fetch(`/api/items/docs/latest?org_id=${orgId}&item_id=${it.id}`, { cache: "no-store" })
 const json = await res.json()
 const docId = json?.document?.id
@@ -1946,6 +1820,7 @@ disabled={reqLoading}
     </div>
   )
 }
+
 
 
 
