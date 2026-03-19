@@ -275,6 +275,24 @@ const selectedOrg = useMemo(() => orgs.find(o => o.id === orgId), [orgs, orgId])
 
 const billingStatus = String(selectedOrg?.billing_status ?? "").trim().toLowerCase()
 const isPremium = (billingStatus === "active" || billingStatus === "trialing")
+
+useEffect(() => {
+  if (typeof window === "undefined" || !window.gtag) return
+
+  const params = new URLSearchParams(window.location.search)
+  const billing = params.get("billing")
+  const purchaseKey = `rs_purchase_tracked_${orgId || "none"}`
+
+  if (billing === "success" && !sessionStorage.getItem(purchaseKey)) {
+    window.gtag("event", "purchase", {
+      transaction_id: `rs_${orgId || "unknown"}_${Date.now()}`,
+      currency: "USD",
+      value: selectedOrg?.plan === "pro" ? 149 : 79,
+      plan: selectedOrg?.plan ?? "starter",
+    })
+    sessionStorage.setItem(purchaseKey, "1")
+  }
+}, [orgId, selectedOrg?.plan])
 const showUpgrade = !isPremium
 const DEV_TRIAL_ENABLED = (process.env.NEXT_PUBLIC_ENABLE_DEV_TRIAL === "1")
 async function startTrial() {
@@ -1826,6 +1844,8 @@ disabled={reqLoading}
     </div>
   )
 }
+
+
 
 
 
