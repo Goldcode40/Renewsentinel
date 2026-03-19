@@ -312,6 +312,12 @@ async function goBilling(mode: "checkout" | "portal", plan: "starter" | "pro" = 
         ? { org_id: orgId }
         : { org_id: orgId, plan }
 
+    if (mode === "checkout" && typeof window !== "undefined" && window.gtag) {
+      window.gtag("event", "checkout_started", {
+        plan: plan,
+      })
+    }
+
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1820,6 +1826,7 @@ disabled={reqLoading}
     </div>
   )
 }
+
 
 
 
