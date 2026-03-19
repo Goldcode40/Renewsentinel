@@ -28,7 +28,7 @@ export default function AuthPage() {
           password,
         })
         if (error) throw error
-        window.location.href = "/dashboard-premium"
+        setMessage("Signup submitted. Check your email if confirmation is enabled, then sign in.")
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
