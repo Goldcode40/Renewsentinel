@@ -53,6 +53,12 @@ export default function AuthPage() {
           <p className="mt-2 text-sm text-slate-700">
             Stop Missing Renewals — Get Alerts Before They Cost You Jobs
           </p>
+          <p className="mt-2 text-sm text-slate-500">
+            Trusted by contractors to prevent costly compliance lapses
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            Track licenses, insurance, and permits in one place — never miss a deadline again
+          </p>
         </div>
 
         <div className="mb-6 flex gap-2">
@@ -124,6 +130,7 @@ export default function AuthPage() {
     </main>
   )
 }
+
 
 
 
